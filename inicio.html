@@ -557,6 +557,65 @@
                     width: 3rem;
                     font-size: 1.5rem;
                 }
+                
+                /* Mobile navbar adjustments */
+                .navbar-brand {
+                    font-size: 1rem;
+                    white-space: normal;
+                    max-width: 70%;
+                }
+                
+                /* Mobile feature sections */
+                .feature-section .col-lg-4 {
+                    margin-bottom: 2rem;
+                }
+                
+                /* Mobile pricing cards */
+                .pricing-card {
+                    margin-bottom: 1.5rem;
+                }
+                
+                /* Footer adjustments */
+                footer div {
+                    flex-direction: column;
+                }
+                
+                footer div > div {
+                    margin-bottom: 1.5rem;
+                    min-width: 100%;
+                }
+            }
+            
+            @media (max-width: 575.98px) {
+                /* Extra small devices */
+                .display-5 {
+                    font-size: 1.75rem;
+                }
+                
+                .btn {
+                    width: 100%;
+                    margin-bottom: 0.5rem;
+                }
+                
+                .d-sm-flex {
+                    flex-direction: column;
+                }
+                
+                .me-sm-3 {
+                    margin-right: 0 !important;
+                    margin-bottom: 1rem;
+                }
+                
+                /* Header padding */
+                .py-5 {
+                    padding-top: 2rem !important;
+                    padding-bottom: 2rem !important;
+                }
+                
+                /* Section padding */
+                section {
+                    padding: 2rem 0 !important;
+                }
             }
         </style>
     </head>
@@ -638,8 +697,8 @@
                 </div>
                 <div class="row gx-5 justify-content-center">
                     <!-- Pricing card free-->
-                    <div class="col-lg-6 col-xl-4">
-                        <div class="card mb-5 mb-xl-0">
+                    <div class="col-lg-6 col-xl-4 mb-4">
+                        <div class="card h-100">
                             <div class="card-body p-5">
                                 <div class="small text-uppercase fw-bold text-muted">Gratis</div>
                                 <div class="mb-3">
@@ -685,8 +744,8 @@
                         </div>
                     </div>
                     <!-- Pricing card pro-->
-                    <div class="col-lg-6 col-xl-4">
-                        <div class="card mb-5 mb-xl-0">
+                    <div class="col-lg-6 col-xl-4 mb-4">
+                        <div class="card h-100">
                             <div class="card-body p-5">
                                 <div class="small text-uppercase fw-bold">
                                     <i class="bi bi-star-fill text-warning"></i>
@@ -735,8 +794,8 @@
                         </div>
                     </div>
                     <!-- Pricing card enterprise-->
-                    <div class="col-lg-6 col-xl-4">
-                        <div class="card">
+                    <div class="col-lg-6 col-xl-4 mb-4">
+                        <div class="card h-100">
                             <div class="card-body p-5">
                                 <div class="small text-uppercase fw-bold text-muted">B2B</div>
                                 <div class="mb-3">
@@ -786,61 +845,59 @@
             </div>
         </section>
         <footer style="background: #000000; color: white; padding: 20px 0; margin-top: 40px; font-family: Arial, sans-serif;">
-    <div style="width: 90%; max-width: 1200px; margin: 0 auto;">
-        <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
-            <div style="flex: 1; min-width: 250px; margin-bottom: 20px;">
-                <h3 style="color: #FFFFFF;">Dirección</h3>
-                <p>Zona Franca del Pacífico</p>
-                <p>Palmira, Valle del Cauca</p>
-                <p>Colombia</p>
+            <div style="width: 90%; max-width: 1200px; margin: 0 auto;">
+                <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 250px; margin-bottom: 20px;">
+                        <h3 style="color: #FFFFFF;">Dirección</h3>
+                        <p>Zona Franca del Pacífico</p>
+                        <p>Palmira, Valle del Cauca</p>
+                        <p>Colombia</p>
+                    </div>
+                    <div style="flex: 1; min-width: 250px; margin-bottom: 20px;">
+                        <h3 style="color: #FFFFFF;">Fecha y Hora</h3>
+                        <p id="currentDateTime"></p>
+                        <p id="timeZone">GMT-5 (Hora estándar de Colombia)</p>
+                    </div>
+                    <div style="flex: 1; min-width: 250px; margin-bottom: 20px;">
+                        <h3 style="color: #FFFFFF;">Enlaces</h3>
+                        <p><a href="https://co.contraentregaco.com/" style="color: #FFFFFF; text-decoration: none;">Mapa</a></p>
+                        <p><a href="https://co.contraentregaco.com/registro" style="color: #FFFFFF; text-decoration: none;">Registro</a></p>
+                        <p><a href="https://co.contraentregaco.com/finanzas" style="color: #FFFFFF; text-decoration: none;">Finanzas</a></p>
+                        <p><a href="https://co.contraentregaco.com/inventario" style="color: #FFFFFF; text-decoration: none;">Inventario</a></p>
+                        <p><a href="https://co.contraentregaco.com/logistica" style="color: #FFFFFF; text-decoration: none;">Logistica</a></p>
+                        <p><a href="https://co.contraentregaco.com/p2p" style="color: #FFFFFF; text-decoration: none;">P2P</a></p>
+                        <p><a href="https://co.contraentregaco.com/b2b" style="color: #FFFFFF; text-decoration: none;">B2B</a></p>
+                        <p><a href="https://co.contraentregaco.com/soporte" style="color: #FFFFFF; text-decoration: none;">Soporte 24/7</a></p>
+                        <p><a href="https://co.contraentregaco.com/terminos" style="color: #FFFFFF; text-decoration: none;">Términos y Condiciones</a></p>
+                    </div>
+                </div>
             </div>
-            <div style="flex: 1; min-width: 250px; margin-bottom: 20px;">
-                <h3 style="color: #FFFFFF;">Fecha y Hora</h3>
-                <p id="currentDateTime"></p>
-                <p id="timeZone">GMT-5 (Hora estándar de Colombia)</p>
-            </div>
-            <div style="flex: 1; min-width: 250px; margin-bottom: 20px;">
-                <h3 style="color: #FFFFFF;">Enlaces</h3>
-                <p><a href="https://co.contraentregaco.com/" style="color: #FFFFFF; text-decoration: none;">Mapa</a></p>
-                <p><a href="https://co.contraentregaco.com/registro" style="color: #FFFFFF; text-decoration: none;">Registro</a></p>
-                <p><a href="https://co.contraentregaco.com/finanzas" style="color: #FFFFFF; text-decoration: none;">Finanzas</a></p>
-                <p><a href="https://co.contraentregaco.com/inventario" style="color: #FFFFFF; text-decoration: none;">Inventario</a></p>
-                <p><a href="https://co.contraentregaco.com/logistica" style="color: #FFFFFF; text-decoration: none;">Logistica</a></p>
-                <p><a href="https://co.contraentregaco.com/p2p" style="color: #FFFFFF; text-decoration: none;">P2P</a></p>
-                <p><a href="https://co.contraentregaco.com/b2b" style="color: #FFFFFF; text-decoration: none;">B2B</a></p>
-                <p><a href="https://co.contraentregaco.com/soporte" style="color: #FFFFFF; text-decoration: none;">Soporte 24/7</a></p>
-                <p><a href="https://co.contraentregaco.com/terminos" style="color: #FFFFFF; text-decoration: none;">Términos y Condiciones</a></p>
-            </div>
-        </div>
-    </div>
-</footer>
+        </footer>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
 
         <!-- Bootstrap core JS-->
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
         <!-- Core theme JS-->
         <script>
-   
-    function updateDateTime() {
-        const now = new Date();
-        const options = { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            timeZone: 'America/Bogota',
-            timeZoneName: 'short'
-        };
-        document.getElementById('currentDateTime').textContent = now.toLocaleDateString('es-CO', options);
-    }
-    updateDateTime();
-    setInterval(updateDateTime, 1000);
+            function updateDateTime() {
+                const now = new Date();
+                const options = { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    timeZone: 'America/Bogota',
+                    timeZoneName: 'short'
+                };
+                document.getElementById('currentDateTime').textContent = now.toLocaleDateString('es-CO', options);
+            }
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
 
-        
             // Simple JavaScript for navbar toggle functionality
             document.addEventListener('DOMContentLoaded', function() {
                 const navbarToggler = document.querySelector('.navbar-toggler');
