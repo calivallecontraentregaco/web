@@ -1,93 +1,599 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+  <!-- Metaetiquetas básicas -->
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
-  <title>Contraentregaco.com - Worldwide Logistics Services.</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  
+  <!-- SEO Avanzado -->
+  <title>Contraentregaco.com | Logística Global | Rastreo en Tiempo Real | Cali, Valle</title>
+  <meta name="description" content="Soluciones logísticas globales con sede en Cali, Valle del Cauca. Rastreo en tiempo real, transporte internacional y servicios de almacenamiento.">
+  <meta name="keywords" content="logística Cali, transporte Valle del Cauca, rastreo en tiempo real, almacenamiento Colombia, distribución internacional, FZ1 Montebello">
+  <meta name="robots" content="index, follow">
+  <meta name="author" content="Contraentregaco.com">
+  <meta name="geo.region" content="CO-VAC">
+  <meta name="geo.placename" content="Cali">
+  <link rel="canonical" href="https://www.contraentregaco.com" />
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://www.contraentregaco.com">
+  <meta property="og:title" content="Contraentregaco.com | Soluciones Logísticas Globales desde Cali">
+  <meta property="og:description" content="Expertos en logística internacional con sede en Cali, Valle del Cauca. Rastreo en tiempo real y servicios de cadena de suministro.">
+  <meta property="og:image" content="https://www.contraentregaco.com/images/og-image.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="es_CO">
+  
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="https://www.contraentregaco.com">
+  <meta property="twitter:title" content="Contraentregaco.com | Logística Global desde Cali">
+  <meta property="twitter:description" content="Soluciones de transporte y almacenamiento con tecnología de rastreo en tiempo real. Sede principal en Cali, Valle del Cauca.">
+  <meta property="twitter:image" content="https://www.contraentregaco.com/images/og-image.jpg">
+  <meta property="twitter:site" content="@contraentregaco">
+  
+  <!-- Favicon y Web App -->
+  <link rel="icon" type="image/png" href="https://www.contraentregaco.com/favicon.png">
+  <link rel="apple-touch-icon" href="https://www.contraentregaco.com/apple-touch-icon.png">
+  <meta name="theme-color" content="#1a1a1a">
+  <link rel="manifest" href="/manifest.json">
+  
+  <!-- Hreflang para internacionalización -->
+  <link rel="alternate" hreflang="es" href="https://www.contraentregaco.com/es">
+  <link rel="alternate" hreflang="en" href="https://www.contraentregaco.com/en">
+  <link rel="alternate" hreflang="es-CO" href="https://www.contraentregaco.com">
+  
+  <!-- Preconexiones y preload -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" as="style">
+  <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style">
+  
+  <!-- Hojas de estilo -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Schema.org para LocalBusiness -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    "name": "Contraentregaco",
+    "image": "https://www.contraentregaco.com/images/logo.png",
+    "@id": "https://www.contraentregaco.com",
+    "url": "https://www.contraentregaco.com",
+    "telephone": "+573123456789",
+    "priceRange": "$$",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "Sector Tanques Montebello",
+      "addressLocality": "Cali",
+      "addressRegion": "Valle del Cauca",
+      "postalCode": "760042",
+      "addressCountry": "CO"
+    },
+    "geo": {
+      "@type": "GeoCoordinates",
+      "latitude": "3.484941",
+      "longitude": "-76.545259"
+    },
+    "openingHoursSpecification": {
+      "@type": "OpeningHoursSpecification",
+      "dayOfWeek": [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday"
+      ],
+      "opens": "00:00",
+      "closes": "23:59"
+    },
+    "sameAs": [
+      "https://www.facebook.com/contraentregaco",
+      "https://www.twitter.com/contraentregaco",
+      "https://www.linkedin.com/company/contraentregaco",
+      "https://www.instagram.com/contraentregaco"
+    ]
+  }
+  </script>
+  
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Roboto, sans-serif; touch-action: manipulation; }
-    #contenedor-mapa { height: 100vh; display: flex; flex-direction: column; }
-    #encabezado { background: #000; color: white; padding: 1rem; text-align: center; }
-    #barra-superior { display: flex; gap: 0.8rem; padding: 0.8rem; background: #f8f8f8; }
-    #buscador { flex: 1; padding: 0.6rem 1rem; border: 1px solid #ddd; border-radius: 24px; -webkit-appearance: none; font-size: 16px; }
-    .btn { background: #000; color: white; padding: 0.6rem 1.2rem; border-radius: 24px; text-decoration: none; }
-    #mapa { flex: 1; background: #f0f0f0; }
-    .cluster-marcadores { background: rgba(40,40,40,0.7); border-radius: 50%; }
-    .leaflet-control-layers { background: #fff; padding: 5px; border-radius: 4px; }
-    #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-    #login-box { background: white; padding: 2rem; border-radius: 8px; width: 90%; max-width: 350px; text-align: center; }
-    #login-box h2 { margin-bottom: 1.5rem; color: #333; }
-    #password-input { width: 100%; padding: 12px; margin-bottom: 1rem; border: 2px solid #ddd; border-radius: 4px; font-size: 16px; }
-    #login-btn { width: 100%; padding: 12px; background: #000; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
-    #login-error { color: red; margin-top: 10px; display: none; }
-    @media (max-width: 768px) { #barra-superior { flex-direction: column; } }
-  </style>
-</head>
-<body>
-  <!-- Sistema de Login -->
-  <div id="login-overlay">
-    <div id="login-box">
-      <h2>Acceso Restringido</h2>
-      <input type="password" id="password-input" placeholder="Ingrese la clave de acceso" autocomplete="off">
-      <button id="login-btn">Ingresar</button>
-      <div id="login-error">Clave incorrecta. Intente nuevamente.</div>
-    </div>
-  </div>
-
-  <!-- Contenido Original (oculto inicialmente) -->
-  <div id="contenedor-mapa" style="display: none;">
-    <div id="encabezado">
-      <h1>Contraentregaco.com</h1>
-      <p>Worldwide Logistics Services</p>
-    </div>
+    :root {
+      --primary-color: #1a1a1a;
+      --secondary-color: #333;
+      --accent-color: #0066cc;
+      --text-color: #333;
+      --light-text: #fff;
+      --bg-light: #f8f8f8;
+      --border-radius: 8px;
+      --box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      --transition: all 0.3s ease;
+    }
     
-    <div id="barra-superior">
-      <input type="search" id="buscador" placeholder="Search..." enterkeyhint="search">
-      <a href="https://registro.contraentregaco.com" class="btn" target="_blank">REGISTRO</a>
-    </div>
+    * { 
+      margin: 0; 
+      padding: 0; 
+      box-sizing: border-box; 
+    }
     
-    <div id="mapa"></div>
-  </div>
-
-  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
-  <script>
-    // =============================================
-    // SISTEMA DE AUTENTICACIÓN (MEJORA IMPLEMENTADA)
-    // =============================================
-    const ACCESS_KEY = "18REAL"; // Cambia esta clave por la que desees
+    body { 
+      font-family: 'Roboto', sans-serif; 
+      color: var(--text-color); 
+      line-height: 1.6; 
+      touch-action: manipulation;
+      overflow-x: hidden;
+    }
     
-    const loginOverlay = document.getElementById('login-overlay');
-    const passwordInput = document.getElementById('password-input');
-    const loginBtn = document.getElementById('login-btn');
-    const loginError = document.getElementById('login-error');
-    const contenedorMapa = document.getElementById('contenedor-mapa');
+    #contenedor-mapa { 
+      height: 100vh; 
+      display: flex; 
+      flex-direction: column; 
+    }
     
-    // Función para verificar el login
-    function checkLogin() {
-      if(passwordInput.value === ACCESS_KEY) {
-        loginOverlay.style.display = 'none';
-        contenedorMapa.style.display = 'flex';
-        initializeMap(); // Inicializa el mapa solo después del login
-      } else {
-        loginError.style.display = 'block';
-        passwordInput.value = '';
-        passwordInput.focus();
+    /* Encabezado mejorado */
+    #encabezado { 
+      background: var(--primary-color); 
+      color: var(--light-text); 
+      padding: 1rem; 
+      position: relative;
+      box-shadow: var(--box-shadow);
+      z-index: 1000;
+    }
+    
+    .header-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    
+    .logo-container {
+      text-align: center;
+      margin-bottom: 0.5rem;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .logo-img {
+      max-width: 300px;
+      width: 100%;
+      height: auto;
+      margin-bottom: 0.5rem;
+      transition: var(--transition);
+    }
+    
+    .logo-img:hover {
+      opacity: 0.9;
+    }
+    
+    .logo-subtitle {
+      color: var(--light-text);
+      font-size: 0.9rem;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 400;
+      letter-spacing: 1px;
+    }
+    
+    .menu-toggle {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: none;
+      border: none;
+      color: var(--light-text);
+      font-size: 1.5rem;
+      cursor: pointer;
+      display: none;
+      z-index: 1001;
+    }
+    
+    .nav-menu {
+      display: flex;
+      gap: 1.5rem;
+      margin-top: 0.5rem;
+    }
+    
+    .nav-menu a {
+      color: var(--light-text);
+      text-decoration: none;
+      font-weight: 500;
+      transition: var(--transition);
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.95rem;
+      position: relative;
+      padding: 0.3rem 0;
+    }
+    
+    .nav-menu a::after {
+      content: '';
+      position: absolute;
+      width: 0;
+      height: 2px;
+      bottom: 0;
+      left: 0;
+      background-color: var(--light-text);
+      transition: var(--transition);
+    }
+    
+    .nav-menu a:hover::after {
+      width: 100%;
+    }
+    
+    .social-links {
+      display: flex;
+      gap: 1rem;
+      margin-top: 0.8rem;
+    }
+    
+    .social-links a {
+      color: var(--light-text);
+      font-size: 1.2rem;
+      transition: var(--transition);
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+    }
+    
+    .social-links a:hover {
+      color: var(--light-text);
+      background: rgba(255,255,255,0.2);
+      transform: translateY(-2px);
+    }
+    
+    /* Contenido principal */
+    #barra-superior { 
+      display: flex; 
+      gap: 0.8rem; 
+      padding: 0.8rem; 
+      background: var(--bg-light); 
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    
+    #buscador { 
+      flex: 1; 
+      padding: 0.6rem 1.2rem; 
+      border: 1px solid #ddd; 
+      border-radius: 24px; 
+      -webkit-appearance: none; 
+      font-size: 16px;
+      transition: var(--transition);
+      font-family: 'Roboto', sans-serif;
+    }
+    
+    #buscador:focus {
+      outline: none;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 2px rgba(0,102,204,0.2);
+    }
+    
+    .btn { 
+      background: var(--primary-color); 
+      color: var(--light-text); 
+      padding: 0.6rem 1.2rem; 
+      border-radius: 24px; 
+      text-decoration: none;
+      font-weight: 500;
+      transition: var(--transition);
+      border: none;
+      cursor: pointer;
+      font-family: 'Montserrat', sans-serif;
+      white-space: nowrap;
+    }
+    
+    .btn:hover {
+      background: var(--secondary-color);
+      transform: translateY(-1px);
+    }
+    
+    #mapa { 
+      flex: 1; 
+      background: #f0f0f0; 
+    }
+    
+    .cluster-marcadores { 
+      background: rgba(40,40,40,0.7); 
+      border-radius: 50%; 
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+    
+    .leaflet-control-layers { 
+      background: #fff; 
+      padding: 5px; 
+      border-radius: var(--border-radius); 
+      box-shadow: var(--box-shadow);
+    }
+    
+    /* Pie de página mejorado */
+    #pie-pagina {
+      background: var(--primary-color);
+      color: var(--light-text);
+      padding: 1.5rem;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+    
+    #pie-pagina a {
+      color: var(--light-text);
+      text-decoration: none;
+      transition: var(--transition);
+      margin: 0 0.3rem;
+    }
+    
+    #pie-pagina a:hover {
+      color: #ccc;
+      text-decoration: underline;
+    }
+    
+    .footer-info {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 0.8rem;
+    }
+    
+    .time-date {
+      font-family: 'Montserrat', sans-serif;
+      margin: 0.5rem 0;
+      font-size: 0.95rem;
+    }
+    
+    .footer-links {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 0.8rem;
+    }
+    
+    /* Responsive */
+    @media (max-width: 992px) {
+      .header-content {
+        padding: 0 1rem;
+      }
+      
+      #barra-superior {
+        padding: 0.8rem 1rem;
       }
     }
     
-    // Event Listeners para el login
-    loginBtn.addEventListener('click', checkLogin);
-    passwordInput.addEventListener('keypress', function(e) {
-      if(e.key === 'Enter') checkLogin();
-    });
+    @media (max-width: 768px) { 
+      #barra-superior { 
+        flex-direction: column; 
+        gap: 0.6rem;
+      }
+      
+      .menu-toggle {
+        display: block;
+      }
+      
+      .nav-menu {
+        display: none;
+        flex-direction: column;
+        gap: 0.5rem;
+        width: 100%;
+        text-align: center;
+        background: var(--primary-color);
+        position: absolute;
+        left: 0;
+        top: 100%;
+        padding: 1rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      }
+      
+      .nav-menu.active {
+        display: flex;
+      }
+      
+      .logo-img {
+        max-width: 220px;
+      }
+      
+      .social-links {
+        margin-top: 1rem;
+      }
+      
+      .footer-info {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
     
+    @media (max-width: 480px) {
+      .logo-img {
+        max-width: 180px;
+      }
+      
+      .logo-subtitle {
+        font-size: 0.8rem;
+      }
+      
+      #buscador {
+        padding: 0.6rem 1rem;
+      }
+      
+      .btn {
+        padding: 0.6rem 1rem;
+        text-align: center;
+      }
+      
+      .footer-links {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+  </style>
+  
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'GA_MEASUREMENT_ID');
+    gtag('config', 'GA_MEASUREMENT_ID', {
+      'page_title': 'Mapa Logístico Contraentregaco',
+      'page_location': window.location.href,
+      'page_path': window.location.pathname
+    });
+  </script>
+  
+  <!-- Facebook Pixel Code -->
+  <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', 'FB_PIXEL_ID');
+    fbq('track', 'PageView');
+    fbq('track', 'ViewContent');
+  </script>
+  <noscript>
+    <img height="1" width="1" style="display:none" 
+         src="https://www.facebook.com/tr?id=FB_PIXEL_ID&ev=PageView&noscript=1"/>
+  </noscript>
+  <!-- End Facebook Pixel Code -->
+</head>
+<body>
+  <!-- Contenido Principal -->
+  <div id="contenedor-mapa">
+    <header id="encabezado" role="banner">
+      <button class="menu-toggle" id="menu-toggle" aria-label="Menú"><i class="fas fa-bars"></i></button>
+      <div class="header-content">
+        <div class="logo-container">
+          <a href="/" aria-label="Inicio">
+            <img src="https://www.contraentregaco.com/images/logo.png" alt="Contraentregaco Logo - Soluciones Logísticas" class="logo-img">
+          </a>
+          <p class="logo-subtitle">Worldwide Logistics Services</p>
+        </div>
+        
+        <nav class="nav-menu" id="nav-menu" role="navigation" aria-label="Menú principal">
+          <a href="/" aria-current="page">Inicio</a>
+          <a href="/servicios-logisticos">Servicios</a>
+          <a href="https://registro.contraentregaco.com" target="_blank" rel="noopener noreferrer">Registro</a>
+          <a href="/rastreo-envios">Rastreo</a>
+          <a href="/almacenamiento-cali">Almacenamiento</a>
+          <a href="/contacto-logistica">Contacto</a>
+          <a href="/soporte-tecnico">Soporte</a>
+        </nav>
+        
+        <div class="social-links">
+          <a href="https://facebook.com/contraentregaco" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+          <a href="https://twitter.com/contraentregaco" target="_blank" rel="noopener noreferrer" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+          <a href="https://linkedin.com/company/contraentregaco" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+          <a href="https://instagram.com/contraentregaco" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+          <a href="https://api.whatsapp.com/send?phone=573123456789" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+        </div>
+      </div>
+    </header>
+    
+    <div id="barra-superior">
+      <input type="search" id="buscador" placeholder="Buscar ubicación en Cali..." enterkeyhint="search" aria-label="Buscar ubicación logística">
+      <a href="https://registro.contraentregaco.com" class="btn" target="_blank" rel="noopener noreferrer">REGISTRO</a>
+      <a href="/rastreo" class="btn">RASTREO</a>
+    </div>
+    
+    <main id="mapa" role="main" aria-label="Mapa logístico"></main>
+  </div>
+
+  <footer id="pie-pagina" role="contentinfo">
+    <div class="footer-info">
+      <div class="time-date" id="hora-fecha-cali"></div>
+      <div>Oficina Principal: Sector Tanques Montebello, Cali, Valle del Cauca</div>
+    </div>
+    
+    <div class="footer-links">
+      <a href="/terminos-servicio">Términos de Servicio</a>
+      <a href="/politica-privacidad">Política de Privacidad</a>
+      <a href="/preguntas-frecuentes">Preguntas Frecuentes</a>
+      <a href="/empleos-logistica">Empleos</a>
+      <a href="/blog-logistica">Blog</a>
+      <a href="/mapa-sitio">Mapa del Sitio</a>
+    </div>
+    
+    <p>&copy; <span id="year"></span> Contraentregaco.com. Todos los derechos reservados.</p>
+    <p>
+      <a href="tel:+573123456789">+57 312 345 6789</a> | 
+      <a href="mailto:contacto@contraentregaco.com">contacto@contraentregaco.com</a>
+    </p>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+  <script>
+    // Año actual en el footer
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Hora y fecha de Cali, Valle del Cauca
+    function actualizarHoraCali() {
+      const opciones = { 
+        timeZone: 'America/Bogota',
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      };
+      
+      const ahora = new Date();
+      const fechaCali = ahora.toLocaleDateString('es-CO', opciones);
+      document.getElementById('hora-fecha-cali').textContent = `Cali, Valle: ${fechaCali}`;
+    }
+    
+    // Actualizar cada segundo
+    actualizarHoraCali();
+    setInterval(actualizarHoraCali, 1000);
+
+    // Menú responsive
+    const menuToggle = document.getElementById('menu-toggle');
+    const navMenu = document.getElementById('nav-menu');
+    
+    menuToggle.addEventListener('click', function() {
+      navMenu.classList.toggle('active');
+      this.setAttribute('aria-expanded', navMenu.classList.contains('active'));
+    });
+
+    // Cerrar menú al hacer clic en un enlace (mobile)
+    document.querySelectorAll('.nav-menu a').forEach(link => {
+      link.addEventListener('click', () => {
+        if(window.innerWidth <= 768) {
+          navMenu.classList.remove('active');
+          menuToggle.setAttribute('aria-expanded', 'false');
+        }
+      });
+    });
+
     // =============================================
-    // CÓDIGO ORIGINAL (CON MAPA)
+    // INICIALIZACIÓN DEL MAPA
     // =============================================
     function initializeMap() {
       // CONFIGURACIÓN DE CAPAS
@@ -99,21 +605,25 @@
           detectRetina: true
         }),
         "OSM": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap',
+          attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors',
           maxZoom: 19
         })
       };
 
       // INICIALIZAR MAPA
       const mapa = L.map('mapa', {
-        center: [19.4326, -99.1332],
-        zoom: 5,
+        center: [3.484941, -76.545259], // Coordenadas de Cali
+        zoom: 12,
         layers: [capas["Maxar"]],
         zoomControl: false
       });
 
+      // Controles del mapa
       L.control.zoom({ position: 'bottomright' }).addTo(mapa);
-      L.control.layers(capas, null, { position: 'topright' }).addTo(mapa);
+      L.control.layers(capas, null, { 
+        position: 'topright',
+        collapsed: false
+      }).addTo(mapa);
 
       // SISTEMA DE MARCADORES
       const clusters = L.markerClusterGroup({
@@ -121,26 +631,60 @@
           html: `<div>${cluster.getChildCount()}</div>`,
           className: 'cluster-marcadores',
           iconSize: [40, 40]
-        })
+        }),
+        spiderfyOnMaxZoom: true,
+        showCoverageOnHover: false,
+        zoomToBoundsOnClick: true
       });
 
+      // Datos de ubicaciones en Cali y otras ciudades
       const ubicaciones = [
-        { "nombre": "FZ1", "pais": "24/7 Sector Tanques Montebello Cali, Valle Del Cauca, Colombia. ", "latlng": [3.484941, -76.545259], "url": "https://fz1.contraentregaco.com/registro" }
+        { 
+          "nombre": "FZ1 Montebello", 
+          "direccion": "Sector Tanques Montebello, Cali, Valle del Cauca", 
+          "latlng": [3.484941, -76.545259], 
+          "url": "https://fz1.contraentregaco.com/registro",
+          "telefono": "+57 123 456 7890",
+          "horario": "24/7",
+          "servicios": "Almacenamiento, Distribución, Logística"
+        },
+        { 
+          "nombre": "Centro Logístico Sur", 
+          "direccion": "Carrera 123 #45-67, Cali", 
+          "latlng": [3.420515, -76.522166], 
+          "url": "/centro-logistico-sur",
+          "telefono": "+57 123 456 7891",
+          "horario": "Lunes a Viernes: 8AM - 6PM"
+        },
+        { 
+          "nombre": "Oficina Principal", 
+          "direccion": "Avenida 5N #23N-45, Cali", 
+          "latlng": [3.451647, -76.532845], 
+          "url": "/contacto",
+          "telefono": "+57 123 456 7892",
+          "horario": "Lunes a Sábado: 7AM - 7PM"
+        }
       ];
 
+      // Crear marcadores con información enriquecida
       const todosMarcadores = [];
       ubicaciones.forEach(loc => {
         const marcador = L.marker(loc.latlng).bindPopup(`
-          <div style="min-width:180px">
-            <h3 style="margin:0 0 5px 0">${loc.nombre}</h3>
-            <p style="margin:0 0 8px 0;color:#666">${loc.pais}</p>
-            <a href="${loc.url}" style="color:#0066cc;text-decoration:none">Info →</a>
+          <div style="min-width:220px">
+            <h3 style="margin:0 0 5px 0;color:var(--accent-color)">${loc.nombre}</h3>
+            <p style="margin:0 0 8px 0;font-size:0.9em">${loc.direccion}</p>
+            ${loc.telefono ? `<p style="margin:0 0 5px 0;font-size:0.9em"><i class="fas fa-phone" style="margin-right:5px"></i> <a href="tel:${loc.telefono}" style="color:#0066cc;text-decoration:none">${loc.telefono}</a></p>` : ''}
+            ${loc.horario ? `<p style="margin:0 0 5px 0;font-size:0.9em"><i class="fas fa-clock" style="margin-right:5px"></i> ${loc.horario}</p>` : ''}
+            ${loc.servicios ? `<p style="margin:0 0 8px 0;font-size:0.9em"><i class="fas fa-boxes" style="margin-right:5px"></i> ${loc.servicios}</p>` : ''}
+            <a href="${loc.url}" style="display:inline-block;background:var(--accent-color);color:white;padding:6px 12px;border-radius:4px;text-decoration:none;margin-top:5px;font-size:0.9em">Más información</a>
           </div>
         `);
-        marcador.datosBusqueda = `${loc.nombre} ${loc.pais}`.toLowerCase();
+        
+        marcador.datosBusqueda = `${loc.nombre} ${loc.direccion} ${loc.telefono || ''} ${loc.servicios || ''}`.toLowerCase();
         todosMarcadores.push(marcador);
       });
 
+      // Añadir marcadores al mapa
       clusters.addLayers(todosMarcadores);
       mapa.addLayer(clusters);
 
@@ -153,23 +697,40 @@
         searchTimeout = setTimeout(() => {
           const termino = searchInput.value.toLowerCase().trim();
           clusters.clearLayers();
+          
+          if(termino === '') {
+            clusters.addLayers(todosMarcadores);
+            return;
+          }
+          
           const filtrados = todosMarcadores.filter(m => 
-            termino === '' || m.datosBusqueda.includes(termino)
+            m.datosBusqueda.includes(termino)
           );
+          
           clusters.addLayers(filtrados);
           
           if(filtrados.length > 0) {
             mapa.fitBounds(clusters.getBounds().pad(0.3));
+          } else {
+            // Mostrar mensaje si no hay resultados
+            alert("No se encontraron ubicaciones que coincidan con la búsqueda");
           }
         }, 300);
       };
 
+      // Eventos de búsqueda
       searchInput.addEventListener('input', handleSearch);
       searchInput.addEventListener('search', handleSearch);
       searchInput.addEventListener('blur', () => mapa.invalidateSize());
 
-      mapa.fitBounds(clusters.getBounds().pad(0.3));
+      // Ajustar vista a los marcadores
+      if(todosMarcadores.length > 0) {
+        mapa.fitBounds(clusters.getBounds().pad(0.3));
+      }
     }
+
+    // Inicializar el mapa al cargar la página
+    document.addEventListener('DOMContentLoaded', initializeMap);
   </script>
 </body>
 </html>
