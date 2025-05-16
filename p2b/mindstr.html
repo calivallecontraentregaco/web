@@ -1,0 +1,1615 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mindstr - NosDAV</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Structured Data Island for initial data -->
+    <script type="application/json" id="initialData">
+      {
+        "version": "0.1",
+        "nodes": [{ "name": "New", "x": 250, "y": 250 }],
+        "connections": []
+      }
+    </script>
+    <script src="./js/nosdav-shim.js"></script>
+    <script src="./js/browser-cuid.js"></script>
+
+    <!-- App root -->
+    <div id="app"></div>
+
+    <script type="module">
+      import { html, render, Component } from './js/standalone.module.js'
+      import * as secp256k1 from 'https://cdn.jsdelivr.net/npm/@noble/secp256k1@1.7.1/+esm'
+
+      console.log('Script loaded')
+
+      window.secp256k1 = secp256k1
+
+      class ActionButton extends Component {
+        constructor(props) {
+          super(props)
+          this.state = { showTooltip: false }
+        }
+
+        render({ icon, label }) {
+          return html`
+            <div
+              class="relative"
+              onMouseEnter=${() => this.setState({ showTooltip: true })}
+              onMouseLeave=${() => this.setState({ showTooltip: false })}
+            >
+              <button class="p-1 text-gray-700 hover:bg-gray-200 rounded">
+                ${icon}
+              </button>
+              ${this.state.showTooltip &&
+              html`
+                <div
+                  class="absolute z-10 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md shadow-sm -top-8 left-1/2 transform -translate-x-1/2"
+                >
+                  ${label}
+                </div>
+              `}
+            </div>
+          `
+        }
+      }
+
+      class MindMap extends Component {
+        constructor(props) {
+          super()
+
+          this.editInputRef = null
+          const data = props.data
+
+          // Define a soft color palette
+          this.softColorPalette = [
+            '#f7e8f7', // Lavender
+            '#e3f2fd', // Light Blue
+            '#e0f7fa', // Light Cyan
+            '#e8f5e9', // Light Green
+            '#fff8e1', // Light Amber
+            '#fff3e0', // Light Orange
+            '#fce4ec', // Light Pink
+            '#f3e5f5', // Light Purple
+            '#e8eaf6', // Light Indigo
+            '#f1f8e9', // Light Light Green
+            '#fffde7', // Light Yellow
+            '#f9fbe7' // Light Lime
+          ]
+
+          this.state = {
+            nodes: data.nodes,
+            connections: data.connections,
+            newNodeName: '',
+            draggingNode: null,
+            canvasOffset: {
+              x: 0,
+              y: 0
+            },
+            panning: false,
+            editingNode: null,
+            points: 0,
+            selectedNode:
+              props.selectedNode !== undefined ? props.selectedNode : null,
+            lastTouchX: null,
+            lastTouchY: null,
+            scale: 1,
+            initialPinchDistance: null,
+            shortcutsDialogOpen: false,
+            activeVideo: null
+          }
+        }
+
+        componentDidUpdate() {
+          this.updateDocumentTitle()
+        }
+
+        updateDocumentTitle() {
+          if (this.state.nodes[0]) {
+            document.title = 'Mindstr - ' + this.state.nodes[0].name
+          }
+        }
+
+        componentDidMount() {
+          console.log('Component did mount')
+
+          this.canvas = this.base.querySelector('canvas')
+          this.ctx = this.canvas.getContext('2d')
+          this.updateCanvasSize()
+          window.addEventListener('resize', () => this.updateCanvasSize())
+          document.addEventListener('keydown', this.handleGlobalKeyDown)
+          this.updateDocumentTitle()
+
+          this.redraw()
+
+          // Add touch event listeners
+          this.canvas.addEventListener(
+            'touchstart',
+            this.handleTouchStart.bind(this)
+          )
+          this.canvas.addEventListener(
+            'touchmove',
+            this.handleTouchMove.bind(this)
+          )
+          this.canvas.addEventListener(
+            'touchend',
+            this.handleTouchEnd.bind(this)
+          )
+
+          const urlParams = new URLSearchParams(window.location.search)
+          const mapFile = urlParams.get('map')
+          const titleParam = urlParams.get('title')
+          const relay = urlParams.get('relay')
+          console.log('Relay:', relay)
+
+          // Simple NIP-98 event listener
+          if (relay) {
+            console.log('Relay:', relay)
+            const socket = new WebSocket(relay)
+            socket.onopen = () => {
+              socket.send(
+                JSON.stringify([
+                  'REQ',
+                  'nip98',
+                  {
+                    authors: [
+                      'f0af4014cb7338fab15f68e116cb537d4008cdd63c7cc0a3a7efcb2db23c0a68'
+                    ]
+                  }
+                ])
+              )
+            }
+            socket.onmessage = e => {
+              const data = JSON.parse(e.data)
+              if (data[0] === 'EVENT' && data[1] === 'nip98') {
+                console.log('NIP-98 event received:', data[2])
+                this.reloadMap()
+              }
+            }
+          }
+
+          // Add drag-and-drop event listeners
+          this.canvas.addEventListener(
+            'dragover',
+            this.handleDragOver.bind(this)
+          )
+          this.canvas.addEventListener('drop', this.handleDrop.bind(this))
+        }
+
+        componentWillUnmount() {
+          document.removeEventListener('keydown', this.handleGlobalKeyDown)
+
+          // Remove touch event listeners
+          this.canvas.removeEventListener(
+            'touchstart',
+            this.handleTouchStart.bind(this)
+          )
+          this.canvas.removeEventListener(
+            'touchmove',
+            this.handleTouchMove.bind(this)
+          )
+          this.canvas.removeEventListener(
+            'touchend',
+            this.handleTouchEnd.bind(this)
+          )
+
+          // Remove all video elements, image elements and containers
+          this.state.nodes.forEach((node, index) => {
+            if (node.link?.endsWith('.mp4')) {
+              const container = document.getElementById(
+                `video-container-${index}`
+              )
+              if (container) container.remove()
+            } else if (node.link?.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+              const container = document.getElementById(
+                `img-container-${index}`
+              )
+              if (container) container.remove()
+            }
+          })
+        }
+
+        openInNewWindowWithMap() {
+          const urlParams = new URLSearchParams(window.location.search)
+          const mapValue = urlParams.get('map')
+          if (mapValue) {
+            window.open(
+              `https://nosdav.com/pastebin/?uri=${mapValue}`,
+              '_blank'
+            )
+          } else {
+            alert('No map URL provided in query string.')
+          }
+        }
+
+        randomId() {
+          return Math.floor(Math.random() * (9999 - 1000 + 1)) + 1000
+        }
+
+        updateCanvasSize() {
+          const margin = 16 // 16px margin on each side
+          this.canvas.width = window.innerWidth - margin * 2
+          this.canvas.height = window.innerHeight - 100 // Reduced height to account for header
+          this.canvas.style.margin = `${margin}px` // Add margin to the canvas
+          this.redraw()
+        }
+
+        updateDataIsland() {
+          const dataElement = document.querySelector('#initialData')
+          dataElement.textContent = JSON.stringify({
+            version: '0.1',
+            nodes: this.state.nodes,
+            connections: this.state.connections,
+            selectedNode: this.state.selectedNode
+          })
+        }
+
+        redraw() {
+          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+          this.ctx.font = '20px Roboto'
+
+          // Apply both translation and scaling
+          this.ctx.setTransform(
+            this.state.scale,
+            0,
+            0,
+            this.state.scale,
+            this.state.canvasOffset.x,
+            this.state.canvasOffset.y
+          )
+
+          // Draw connections
+          this.state.connections.forEach(conn => {
+            const startNode = this.state.nodes[conn.start]
+            const endNode = this.state.nodes[conn.end]
+            this.ctx.beginPath()
+            this.ctx.moveTo(startNode.x, startNode.y)
+            this.ctx.lineTo(endNode.x, endNode.y)
+            this.ctx.strokeStyle = '#000' // Resetting stroke color
+            this.ctx.stroke()
+          })
+
+          // Draw nodes, videos, and images
+          this.state.nodes.forEach((node, index) => {
+            const textWidth = this.ctx.measureText(node.name).width
+
+            // Check if this node has a video or image link
+            if (node.link?.endsWith('.mp4')) {
+              // Handle video nodes (existing code)
+              let videoElement = document.getElementById(`video-${index}`)
+              if (!videoElement) {
+                // Create a container for the video
+                const container = document.createElement('div')
+                container.id = `video-container-${index}`
+                container.style.position = 'fixed'
+                container.style.zIndex = '1000'
+                container.style.pointerEvents = 'all'
+                container.style.width = '160px'
+                container.style.height = '120px'
+                container.style.backgroundColor = 'black'
+                container.style.borderRadius = '4px'
+                container.style.overflow = 'visible'
+
+                // Create video element
+                videoElement = document.createElement('video')
+                videoElement.id = `video-${index}`
+                videoElement.src = node.link
+                videoElement.style.width = '100%'
+                videoElement.style.height = '100%'
+                videoElement.style.pointerEvents = 'all'
+                videoElement.controls = true
+                videoElement.loop = true
+                videoElement.muted = true
+                videoElement.autoplay = true
+                videoElement.style.display = 'block'
+
+                container.appendChild(videoElement)
+                document.body.appendChild(container)
+
+                // Modified event listener to allow node dragging
+                container.addEventListener('mousedown', e => {
+                  // Prevent default to stop video dragging behavior
+                  e.preventDefault()
+
+                  // Set both selectedNode and draggingNode states
+                  this.setState(
+                    {
+                      selectedNode: index,
+                      draggingNode: index
+                    },
+                    () => this.redraw()
+                  )
+
+                  // Add listeners to document to handle move and release
+                  const handleMouseMove = moveEvent => {
+                    const rect = this.canvas.getBoundingClientRect()
+                    const mouseX =
+                      (moveEvent.clientX -
+                        rect.left -
+                        this.state.canvasOffset.x) /
+                      this.state.scale
+                    const mouseY =
+                      (moveEvent.clientY -
+                        rect.top -
+                        this.state.canvasOffset.y) /
+                      this.state.scale
+
+                    const nodesCopy = [...this.state.nodes]
+                    nodesCopy[index].x = mouseX
+                    nodesCopy[index].y = mouseY
+                    this.setState({ nodes: nodesCopy }, () => this.redraw())
+                  }
+
+                  const handleMouseUp = () => {
+                    document.removeEventListener('mousemove', handleMouseMove)
+                    document.removeEventListener('mouseup', handleMouseUp)
+                    this.setState({ draggingNode: null })
+                  }
+
+                  document.addEventListener('mousemove', handleMouseMove)
+                  document.addEventListener('mouseup', handleMouseUp)
+                })
+
+                videoElement.onerror = e => {
+                  console.error('Video error:', e)
+                  alert('Error loading video: ' + videoElement.error.message)
+                }
+
+                videoElement.onloadeddata = () => {
+                  console.log('Video loaded successfully')
+                }
+              }
+
+              // Update video container position
+              const container = document.getElementById(
+                `video-container-${index}`
+              )
+              if (container) {
+                const canvasRect = this.canvas.getBoundingClientRect()
+                const nodeXInCanvas =
+                  node.x * this.state.scale + this.state.canvasOffset.x
+                const nodeYInCanvas =
+                  node.y * this.state.scale + this.state.canvasOffset.y
+                container.style.left = `${canvasRect.left + nodeXInCanvas}px`
+                container.style.top = `${canvasRect.top + nodeYInCanvas}px`
+                container.style.transform = 'translate(-50%, -50%)'
+              }
+
+              // Draw a larger oval around the video
+              const ovalWidth = 180
+              const ovalHeight = 140
+              this.ctx.beginPath()
+              this.ctx.ellipse(
+                node.x,
+                node.y,
+                ovalWidth / 2,
+                ovalHeight / 2,
+                0,
+                0,
+                2 * Math.PI
+              )
+            } else if (node.link?.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+              // Handle image nodes
+              let imgElement = document.getElementById(`img-${index}`)
+              if (!imgElement) {
+                // Create a container for the image
+                const container = document.createElement('div')
+                container.id = `img-container-${index}`
+                container.style.position = 'fixed'
+                container.style.zIndex = '1000'
+                container.style.pointerEvents = 'all'
+                container.style.width = '160px'
+                container.style.height = '120px'
+                container.style.backgroundColor = 'white'
+                container.style.borderRadius = '4px'
+                container.style.overflow = 'hidden'
+                container.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'
+
+                // Create image element
+                imgElement = document.createElement('img')
+                imgElement.id = `img-${index}`
+                imgElement.src = node.link
+                imgElement.style.width = '100%'
+                imgElement.style.height = '100%'
+                imgElement.style.objectFit = 'contain'
+                imgElement.style.pointerEvents = 'all'
+                imgElement.style.display = 'block'
+
+                container.appendChild(imgElement)
+                document.body.appendChild(container)
+
+                // Modified event listener to allow node dragging
+                container.addEventListener('mousedown', e => {
+                  // Prevent default to stop image dragging behavior
+                  e.preventDefault()
+
+                  // Set both selectedNode and draggingNode states
+                  this.setState(
+                    {
+                      selectedNode: index,
+                      draggingNode: index
+                    },
+                    () => this.redraw()
+                  )
+
+                  // Add listeners to document to handle move and release
+                  const handleMouseMove = moveEvent => {
+                    const rect = this.canvas.getBoundingClientRect()
+                    const mouseX =
+                      (moveEvent.clientX -
+                        rect.left -
+                        this.state.canvasOffset.x) /
+                      this.state.scale
+                    const mouseY =
+                      (moveEvent.clientY -
+                        rect.top -
+                        this.state.canvasOffset.y) /
+                      this.state.scale
+
+                    const nodesCopy = [...this.state.nodes]
+                    nodesCopy[index].x = mouseX
+                    nodesCopy[index].y = mouseY
+                    this.setState({ nodes: nodesCopy }, () => this.redraw())
+                  }
+
+                  const handleMouseUp = () => {
+                    document.removeEventListener('mousemove', handleMouseMove)
+                    document.removeEventListener('mouseup', handleMouseUp)
+                    this.setState({ draggingNode: null })
+                  }
+
+                  document.addEventListener('mousemove', handleMouseMove)
+                  document.addEventListener('mouseup', handleMouseUp)
+                })
+
+                // Add error handling
+                imgElement.onerror = e => {
+                  console.error('Image error:', e)
+                  imgElement.style.display = 'none'
+                  container.style.backgroundColor = '#ffebee'
+                  container.innerHTML +=
+                    '<div style="padding: 8px; color: #d32f2f; font-size: 12px;">Error loading image</div>'
+                }
+
+                // Add load handling
+                imgElement.onload = () => {
+                  console.log('Image loaded successfully')
+                }
+              }
+
+              // Update image container position
+              const container = document.getElementById(
+                `img-container-${index}`
+              )
+              if (container) {
+                const canvasRect = this.canvas.getBoundingClientRect()
+                const nodeXInCanvas =
+                  node.x * this.state.scale + this.state.canvasOffset.x
+                const nodeYInCanvas =
+                  node.y * this.state.scale + this.state.canvasOffset.y
+                container.style.left = `${canvasRect.left + nodeXInCanvas}px`
+                container.style.top = `${canvasRect.top + nodeYInCanvas}px`
+                container.style.transform = 'translate(-50%, -50%)'
+              }
+
+              // Draw a larger oval around the image
+              const ovalWidth = 180
+              const ovalHeight = 140
+              this.ctx.beginPath()
+              this.ctx.ellipse(
+                node.x,
+                node.y,
+                ovalWidth / 2,
+                ovalHeight / 2,
+                0,
+                0,
+                2 * Math.PI
+              )
+            } else {
+              // Regular node drawing
+              const ovalWidth = Math.max(textWidth + 10, 40)
+              const ovalHeight = 40
+              this.ctx.beginPath()
+              this.ctx.ellipse(
+                node.x,
+                node.y,
+                ovalWidth / 2,
+                ovalHeight / 2,
+                0,
+                0,
+                2 * Math.PI
+              )
+            }
+
+            if (this.state.selectedNode === index) {
+              this.ctx.fillStyle = 'lightblue'
+            } else {
+              this.ctx.fillStyle = node.bgColor || '#fff'
+            }
+            this.ctx.fill()
+            this.ctx.strokeStyle = '#000'
+            this.ctx.stroke()
+
+            // Draw node name
+            this.ctx.fillStyle = node.link ? 'blue' : '#000'
+            this.ctx.fillText(node.name, node.x - textWidth / 2, node.y + 5)
+            if (
+              node.link &&
+              !node.link.endsWith('.mp4') &&
+              !node.link.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+            ) {
+              this.ctx.beginPath()
+              this.ctx.moveTo(node.x - textWidth / 2, node.y + 10)
+              this.ctx.lineTo(node.x + textWidth / 2, node.y + 10)
+              this.ctx.strokeStyle = 'blue'
+              this.ctx.stroke()
+              this.ctx.strokeStyle = '#000'
+            }
+          })
+
+          // Reset transformation after drawing
+          this.ctx.setTransform(1, 0, 0, 1, 0, 0)
+
+          this.updateDataIsland()
+        }
+
+        // Get a random color from the soft palette
+        getRandomSoftColor() {
+          const randomIndex = Math.floor(
+            Math.random() * this.softColorPalette.length
+          )
+          return this.softColorPalette[randomIndex]
+        }
+
+        handleGlobalKeyDown = e => {
+          if (e.key === 'Insert' && this.state.selectedNode !== null) {
+            const newNode = {
+              '@id': '#' + this.randomId(),
+              name: '',
+              x: this.state.nodes[this.state.selectedNode].x + 50,
+              y: this.state.nodes[this.state.selectedNode].y + 50,
+              bgColor: this.getRandomSoftColor() // Add random background color
+            }
+
+            this.setState(
+              prevState => {
+                const newNodes = [...prevState.nodes, newNode]
+                const newConnections = [
+                  ...prevState.connections,
+                  {
+                    start: prevState.selectedNode,
+                    end: newNodes.length - 1
+                  }
+                ]
+
+                return {
+                  nodes: newNodes,
+                  connections: newConnections
+                }
+              },
+              () => {
+                this.redraw()
+                this.setState(
+                  { editingNode: this.state.nodes.length - 1 },
+                  () => {
+                    if (this.editInputRef) {
+                      this.editInputRef.focus()
+                      this.editInputRef.select()
+                    }
+                  }
+                )
+              }
+            )
+          }
+
+          if (
+            e.key === 'Enter' &&
+            this.state.selectedNode !== null &&
+            this.state.editingNode === null
+          ) {
+            // Identify the parent node of the currently selected node
+            const parentNodeConnection = this.state.connections.find(
+              conn => conn.end === this.state.selectedNode
+            )
+            let parentNodeIndex
+            if (parentNodeConnection) {
+              parentNodeIndex = parentNodeConnection.start
+            }
+
+            if (parentNodeIndex !== undefined) {
+              const newNode = {
+                '@id': '#' + this.randomId(),
+                name: '',
+                x:
+                  this.state.nodes[this.state.selectedNode].x +
+                  (Math.random() * 100 - 50), // Randomly position to the left or right
+                y: this.state.nodes[this.state.selectedNode].y + 50, // Below the current node
+                bgColor: this.getRandomSoftColor() // Add random background color
+              }
+
+              this.setState(
+                prevState => {
+                  const newNodes = [...prevState.nodes, newNode]
+                  const newConnections = [
+                    ...prevState.connections,
+                    {
+                      start: parentNodeIndex,
+                      end: newNodes.length - 1
+                    }
+                  ]
+
+                  return {
+                    nodes: newNodes,
+                    connections: newConnections
+                  }
+                },
+                () => {
+                  this.redraw()
+                  this.setState(
+                    { editingNode: this.state.nodes.length - 1 },
+                    () => {
+                      if (this.editInputRef) {
+                        this.editInputRef.focus()
+                        this.editInputRef.select()
+                      }
+                    }
+                  )
+                }
+              )
+            }
+          }
+
+          if (e.ctrlKey && e.shiftKey && e.key === 'K') {
+            this.openInNewWindowWithMap()
+          }
+
+          if (e.ctrlKey && e.key === 'm' && this.state.selectedNode !== null) {
+            // Get the current node name
+            const nodeName = this.state.nodes[this.state.selectedNode].name
+
+            // Generate a default link based on the node name
+            let defaultLink = ''
+            if (nodeName) {
+              // Replace spaces with underscores and remove special characters
+              const formattedName = nodeName
+                .replace(/\s+/g, '_') // Replace spaces with underscores
+                .replace(/[^\w-]/g, '') // Remove special characters except underscores and hyphens
+                .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
+
+              // Only create default link if we have a valid name after formatting
+              if (formattedName) {
+                defaultLink = `./${formattedName}.json`
+              }
+            }
+
+            // Prompt user with the default link
+            const link = prompt(
+              'Enter a hyperlink for the selected node:',
+              defaultLink
+            )
+
+            if (link) {
+              const nodesCopy = [...this.state.nodes]
+              const updatedNode = {
+                ...nodesCopy[this.state.selectedNode], // Spread the current properties of the node
+                link: link
+              }
+              nodesCopy[this.state.selectedNode] = updatedNode
+              this.setState({ nodes: nodesCopy }, () => {
+                this.updateDataIsland() // Update the data island after adding the link
+              })
+            }
+          }
+
+          if (e.ctrlKey && e.key === 's') {
+            e.preventDefault() // Prevent the browser's save dialog
+            this.saveData()
+          }
+
+          if (e.ctrlKey && e.key === 'r') {
+            e.preventDefault() // Prevent the browser's reload
+            this.reloadMap()
+          }
+
+          if (e.key === 'Delete' && this.state.selectedNode !== null) {
+            const nodeToDelete = this.state.selectedNode
+
+            // Filter out connections associated with the node
+            const updatedConnections = this.state.connections.filter(
+              conn => conn.start !== nodeToDelete && conn.end !== nodeToDelete
+            )
+
+            // Adjust connection indices greater than nodeToDelete
+            const adjustedConnections = updatedConnections.map(conn => {
+              if (conn.start > nodeToDelete) conn.start -= 1
+              if (conn.end > nodeToDelete) conn.end -= 1
+              return conn
+            })
+
+            // Remove the node from the nodes array
+            const updatedNodes = [
+              ...this.state.nodes.slice(0, nodeToDelete),
+              ...this.state.nodes.slice(nodeToDelete + 1)
+            ]
+
+            this.setState(
+              {
+                nodes: updatedNodes,
+                connections: adjustedConnections,
+                selectedNode: null
+              },
+              () => this.redraw()
+            )
+          }
+        }
+
+        async saveData() {
+          const dataIslandContent =
+            document.getElementById('initialData').textContent
+          const data = JSON.parse(dataIslandContent)
+          const urlParams = new URLSearchParams(window.location.search)
+          const mapFile = urlParams.get('map')
+          if (mapFile) {
+            try {
+              const response = await fetch(mapFile, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+              })
+              if (response.ok) {
+                console.log('Data saved successfully!')
+                new Audio('./audio/save.ogg').play()
+                this.setState({ points: this.state.points + 500 })
+              } else {
+                alert('Error saving data.')
+              }
+            } catch (error) {
+              alert('Error saving data: ' + error.message)
+            }
+          } else {
+            alert('No map URL provided in query string.')
+          }
+        }
+
+        async reloadMap() {
+          const urlParams = new URLSearchParams(window.location.search)
+          const mapFile = urlParams.get('map')
+          if (mapFile) {
+            try {
+              console.log('Reloading map from:', mapFile)
+              const response = await fetch(mapFile)
+              if (response.ok) {
+                const data = await response.json()
+                console.log('Map data loaded successfully:', data)
+
+                // Update the data island
+                const dataElement = document.getElementById('initialData')
+                dataElement.textContent = JSON.stringify(data)
+
+                // Update the component state
+                this.setState(
+                  {
+                    nodes: data.nodes || [],
+                    connections: data.connections || [],
+                    selectedNode:
+                      data.selectedNode !== undefined ? data.selectedNode : 0
+                  },
+                  () => {
+                    this.redraw()
+                    new Audio('./audio/reload.ogg').play() // Optional: play a sound
+                    console.log('Map reloaded successfully!')
+                  }
+                )
+              } else {
+                alert('Error reloading map: ' + response.statusText)
+              }
+            } catch (error) {
+              alert('Error reloading map: ' + error.message)
+            }
+          } else {
+            alert('No map URL provided in query string.')
+          }
+        }
+
+        handleCanvasMouseDown(e) {
+          const rect = e.target.getBoundingClientRect() // Get canvas position
+          const mouseX =
+            (e.clientX - rect.left - this.state.canvasOffset.x) /
+            this.state.scale
+          const mouseY =
+            (e.clientY - rect.top - this.state.canvasOffset.y) /
+            this.state.scale
+
+          // Extract the link handling logic into a separate method
+          if (!this.handleNodeLink(mouseX, mouseY)) {
+            const clickedNodeIndex = this.state.nodes.findIndex(node => {
+              const distance = Math.sqrt(
+                (node.x - mouseX) ** 2 + (node.y - mouseY) ** 2
+              )
+              return distance <= 20
+            })
+
+            if (clickedNodeIndex > -1) {
+              // If we're already handling a mousedown on an image or video container,
+              // the setState in those handlers will have selected the node,
+              // but we still need to set the draggingNode state here
+              this.setState(
+                {
+                  draggingNode: clickedNodeIndex,
+                  selectedNode: clickedNodeIndex
+                },
+                () => this.redraw()
+              )
+            } else {
+              this.setState({ panning: true })
+            }
+          }
+        }
+
+        // Modify handleNodeLink to not handle image links specially
+        handleNodeLink(x, y) {
+          const clickedNode = this.state.nodes.find(node => {
+            const distance = Math.sqrt((node.x - x) ** 2 + (node.y - y) ** 2)
+            if (distance <= 20) {
+              const textWidth = this.ctx.measureText(node.name).width
+              return (
+                x >= node.x - textWidth / 2 &&
+                x <= node.x + textWidth / 2 &&
+                y >= node.y - 10 &&
+                y <= node.y + 10
+              )
+            }
+            return false
+          })
+
+          if (
+            clickedNode?.link &&
+            !clickedNode.link.endsWith('.mp4') &&
+            !clickedNode.link.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+          ) {
+            let href = clickedNode.link
+
+            // Existing link handling logic
+            if (href.endsWith('.md')) {
+              if (href.startsWith('./') || href.startsWith('../')) {
+                const currentURL = new URL(window.location.href)
+                const oldMapValue = currentURL.searchParams.get('map')
+                const oldMapURL = new URL(oldMapValue)
+                href = new URL(href, oldMapURL).toString()
+              }
+              href = './doc.html?uri=' + encodeURIComponent(href)
+            } else if (href.startsWith('./') || href.startsWith('../')) {
+              const currentURL = new URL(window.location.href)
+              const oldMapValue = currentURL.searchParams.get('map')
+              const oldMapURL = new URL(oldMapValue)
+              const combinedValue = new URL(href, oldMapURL).toString()
+              currentURL.searchParams.set('map', combinedValue)
+              href = currentURL.toString()
+            }
+
+            window.open(href, clickedNode.name.replace(/\s+/g, '_'))
+            return true
+          }
+          return false
+        }
+
+        handleCanvasMouseMove(e) {
+          if (this.state.draggingNode !== null) {
+            const rect = e.target.getBoundingClientRect()
+            const mouseX =
+              (e.clientX - rect.left - this.state.canvasOffset.x) /
+              this.state.scale
+            const mouseY =
+              (e.clientY - rect.top - this.state.canvasOffset.y) /
+              this.state.scale
+
+            const nodesCopy = [...this.state.nodes]
+            nodesCopy[this.state.draggingNode].x = mouseX
+            nodesCopy[this.state.draggingNode].y = mouseY
+            this.setState({ nodes: nodesCopy }, () => this.redraw())
+          } else if (this.state.panning) {
+            const deltaX = e.movementX
+            const deltaY = e.movementY
+            this.setState(
+              prevState => ({
+                canvasOffset: {
+                  x: prevState.canvasOffset.x + deltaX,
+                  y: prevState.canvasOffset.y + deltaY
+                },
+                lastTouchX: e.clientX,
+                lastTouchY: e.clientY
+              }),
+              () => this.redraw()
+            )
+          }
+        }
+        handleCanvasMouseUp(e) {
+          console.log('MouseUp event captured')
+          this.setState({ panning: false })
+          if (this.state.draggingNode !== null) {
+            this.setState({ draggingNode: null })
+          }
+        }
+
+        handleNodeCreation() {
+          if (this.state.newNodeName.trim()) {
+            const newNode = {
+              '@id': '#' + this.randomId(),
+              name: this.state.newNodeName.trim(),
+              x: 200 + Math.random() * 100, // Random position for demonstration
+              y: 200 + Math.random() * 100,
+              bgColor: this.getRandomSoftColor() // Add random background color
+            }
+
+            this.setState(
+              prevState => {
+                const newNodes = [...prevState.nodes, newNode]
+                let newConnections = [...prevState.connections]
+
+                // Check if there's a selected node, if so, connect the new node to it
+                if (prevState.selectedNode !== null) {
+                  newConnections.push({
+                    start: prevState.selectedNode,
+                    end: newNodes.length - 1
+                  })
+                } else if (newNodes.length > 1) {
+                  // If no node is selected, but it's not the first node,
+                  // connect it to the first node (default behavior)
+                  newConnections.push({
+                    start: 0,
+                    end: newNodes.length - 1
+                  })
+                }
+
+                return {
+                  nodes: newNodes,
+                  connections: newConnections,
+                  newNodeName: ''
+                }
+              },
+              () => this.redraw()
+            )
+          }
+        }
+
+        handleCanvasDoubleClick(e) {
+          const rect = e.target.getBoundingClientRect()
+          const mouseX = e.clientX - rect.left - this.state.canvasOffset.x // Adjust for canvas offset
+          const mouseY = e.clientY - rect.top - this.state.canvasOffset.y // Adjust for canvas offset
+
+          const clickedNodeIndex = this.state.nodes.findIndex(
+            node =>
+              Math.sqrt((node.x - mouseX) ** 2 + (node.y - mouseY) ** 2) <= 20
+          )
+
+          if (clickedNodeIndex > -1) {
+            this.setState({ editingNode: clickedNodeIndex }, () => {
+              if (this.editInputRef) {
+                this.editInputRef.focus()
+                this.editInputRef.select()
+              }
+            })
+          }
+        }
+
+        handleInputChange(e) {
+          this.setState({ newNodeName: e.target.value })
+        }
+
+        showShortcutsList() {
+          // Check if dialog is already open
+          if (this.state.shortcutsDialogOpen) {
+            // Find and remove the existing dialog
+            const existingDialog = document.getElementById('shortcuts-dialog')
+            if (existingDialog) {
+              existingDialog.remove()
+            }
+            this.setState({ shortcutsDialogOpen: false })
+            return
+          }
+
+          const shortcuts = [
+            {
+              key: 'Insert',
+              action: 'Insert a child node connected to the selected node'
+            },
+            {
+              key: 'Enter',
+              action:
+                'Insert a sibling node (connected to the parent of selected node)'
+            },
+            { key: 'Double Click', action: 'Edit node' },
+            { key: 'Ctrl+M', action: 'Add link to selected node' },
+            { key: 'Delete', action: 'Delete selected node' },
+            { key: 'Ctrl+S', action: 'Save mind map' },
+            { key: 'Ctrl+R', action: 'Reload mind map from storage' },
+            {
+              key: 'Ctrl+Shift+K',
+              action: 'Open map in new window (pastebin)'
+            },
+            { key: 'Mouse drag on node', action: 'Move node' },
+            { key: 'Mouse drag on canvas', action: 'Pan the view' },
+            { key: 'Pinch gesture', action: 'Zoom in/out (touch devices)' }
+          ]
+
+          const shortcutsList = shortcuts
+            .map(s => `<li>${s.key}: ${s.action}</li>`)
+            .join('')
+
+          const modal = document.createElement('div')
+          modal.id = 'shortcuts-dialog' // Add ID for easy reference
+          modal.style =
+            'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000;'
+          modal.innerHTML = `
+            <div id="shortcuts-dialog-content" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.3); max-width: 80%; max-height: 80%; overflow-y: auto;">
+              <h3 class="text-lg font-bold mb-3">Keyboard Shortcuts</h3>
+              <ul class="space-y-2">${shortcutsList}</ul>
+              <button class="mt-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded" onclick="document.getElementById('shortcuts-dialog').remove(); this.dispatchEvent(new CustomEvent('dialogClosed'));">Close</button>
+            </div>
+          `
+
+          // Add event listener to update state when dialog is closed
+          modal.addEventListener('dialogClosed', () => {
+            this.setState({ shortcutsDialogOpen: false })
+          })
+
+          // Add click event listener to close when clicking outside the dialog
+          modal.addEventListener('click', e => {
+            if (e.target === modal) {
+              modal.remove()
+              this.setState({ shortcutsDialogOpen: false })
+            }
+          })
+
+          document.body.appendChild(modal)
+          this.setState({ shortcutsDialogOpen: true })
+        }
+
+        handleTouchStart(e) {
+          e.preventDefault()
+          if (e.touches.length === 2) {
+            // Initialize pinch-to-zoom
+            const distance = this.getTouchDistance(e.touches[0], e.touches[1])
+            this.setState({ initialPinchDistance: distance })
+          } else if (e.touches.length === 1) {
+            const touch = e.touches[0]
+            const rect = e.target.getBoundingClientRect()
+            // Adjust touch coordinates for current scale and offset
+            const touchX =
+              (touch.clientX - rect.left - this.state.canvasOffset.x) /
+              this.state.scale
+            const touchY =
+              (touch.clientY - rect.top - this.state.canvasOffset.y) /
+              this.state.scale
+
+            // Try to handle link first
+            if (!this.handleNodeLink(touchX, touchY)) {
+              // Check if we're touching a node
+              const touchedNodeIndex = this.state.nodes.findIndex(node => {
+                const distance = Math.sqrt(
+                  (node.x - touchX) ** 2 + (node.y - touchY) ** 2
+                )
+                return distance <= 20
+              })
+
+              if (touchedNodeIndex > -1) {
+                this.setState(
+                  {
+                    draggingNode: touchedNodeIndex,
+                    selectedNode: touchedNodeIndex
+                  },
+                  () => this.redraw()
+                )
+              } else {
+                this.setState({
+                  panning: true,
+                  lastTouchX: touch.clientX,
+                  lastTouchY: touch.clientY
+                })
+              }
+            }
+          }
+        }
+
+        handleTouchMove(e) {
+          e.preventDefault() // Prevent scrolling
+          if (
+            e.touches.length === 2 &&
+            this.state.initialPinchDistance !== null
+          ) {
+            // Handle pinch-to-zoom
+            const currentDistance = this.getTouchDistance(
+              e.touches[0],
+              e.touches[1]
+            )
+            const scale = Math.max(
+              0.1,
+              Math.min(
+                5,
+                this.state.scale *
+                  (currentDistance / this.state.initialPinchDistance)
+              )
+            )
+
+            this.setState(
+              prevState => ({
+                scale: scale,
+                initialPinchDistance: currentDistance
+              }),
+              () => this.redraw()
+            )
+          } else if (e.touches.length === 1 && this.state.panning) {
+            const touch = e.touches[0]
+            const deltaX = touch.clientX - this.state.lastTouchX
+            const deltaY = touch.clientY - this.state.lastTouchY
+
+            this.setState(
+              prevState => ({
+                canvasOffset: {
+                  x: prevState.canvasOffset.x + deltaX,
+                  y: prevState.canvasOffset.y + deltaY
+                },
+                lastTouchX: touch.clientX,
+                lastTouchY: touch.clientY
+              }),
+              () => this.redraw()
+            )
+          }
+        }
+
+        handleTouchEnd(e) {
+          e.preventDefault()
+          this.setState({
+            panning: false,
+            lastTouchX: null,
+            lastTouchY: null,
+            initialPinchDistance: null
+          })
+        }
+
+        getTouchDistance(touch1, touch2) {
+          return Math.hypot(
+            touch2.clientX - touch1.clientX,
+            touch2.clientY - touch1.clientY
+          )
+        }
+
+        // Modified video handling method
+        handleVideoLink(href, node) {
+          console.log('Creating video element for:', href) // Debug log
+
+          // Remove any existing video
+          if (this.state.activeVideo) {
+            this.state.activeVideo.remove()
+          }
+
+          // Create video element
+          const video = document.createElement('video')
+          video.src = href
+          video.style.position = 'fixed' // Changed to fixed positioning
+          video.style.width = '320px'
+          video.style.height = '240px'
+
+          // Calculate position relative to viewport
+          const canvasRect = this.canvas.getBoundingClientRect()
+          const nodeXInCanvas =
+            node.x * this.state.scale + this.state.canvasOffset.x
+          const nodeYInCanvas =
+            node.y * this.state.scale + this.state.canvasOffset.y
+
+          video.style.left = `${canvasRect.left + nodeXInCanvas}px`
+          video.style.top = `${canvasRect.top + nodeYInCanvas}px`
+          video.style.transform = 'translate(-50%, -50%)'
+          video.style.zIndex = '1000'
+          video.controls = true
+          video.autoplay = true // Add autoplay
+
+          // Add error handling
+          video.onerror = e => {
+            console.error('Video error:', e)
+            alert('Error loading video: ' + video.error.message)
+          }
+
+          // Add load handling
+          video.onloadeddata = () => {
+            console.log('Video loaded successfully')
+          }
+
+          document.body.appendChild(video)
+          this.setState({ activeVideo: video })
+          console.log('Video element added to document') // Debug log
+
+          // Add click handler to remove video when clicking outside
+          const handleClickOutside = e => {
+            if (e.target !== video) {
+              video.remove()
+              this.setState({ activeVideo: null })
+              document.removeEventListener('click', handleClickOutside)
+              console.log('Video removed') // Debug log
+            }
+          }
+          document.addEventListener('click', handleClickOutside)
+          return true
+        }
+
+        handleDragOver(e) {
+          e.preventDefault() // Prevent default to enable drop
+        }
+
+        handleDrop(e) {
+          e.preventDefault()
+          // Handle the dropped file here
+          if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const file = e.dataTransfer.files[0]
+            if (file.type.match(/image.*/)) {
+              // Get cursor position for placement of the new node
+              const rect = e.target.getBoundingClientRect()
+              const dropX =
+                (e.clientX - rect.left - this.state.canvasOffset.x) /
+                this.state.scale
+              const dropY =
+                (e.clientY - rect.top - this.state.canvasOffset.y) /
+                this.state.scale
+
+              // Create a temporary URL for the image
+              const imageUrl = URL.createObjectURL(file)
+
+              // Create a new node with the image link
+              const newNode = {
+                '@id': '#' + this.randomId(),
+                name: file.name.split('.')[0], // Use filename without extension as node name
+                link: imageUrl,
+                x: dropX,
+                y: dropY,
+                bgColor: this.getRandomSoftColor() // Add random background color
+              }
+
+              // Add the node to the mind map
+              this.setState(
+                prevState => {
+                  const newNodes = [...prevState.nodes, newNode]
+                  let newConnections = [...prevState.connections]
+
+                  // Connect to selected node if one exists
+                  if (prevState.selectedNode !== null) {
+                    newConnections.push({
+                      start: prevState.selectedNode,
+                      end: newNodes.length - 1
+                    })
+                  }
+
+                  return {
+                    nodes: newNodes,
+                    connections: newConnections,
+                    selectedNode: newNodes.length - 1 // Select the new node
+                  }
+                },
+                () => this.redraw()
+              )
+            }
+          }
+        }
+
+        render(_, { nodes, newNodeName, editingNode }) {
+          return html`
+            <div>
+              <nav class="bg-gray-100 p-4 shadow-md">
+                <div
+                  class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4"
+                >
+                  <div class="flex items-center space-x-2">
+                    <h1 class="text-xl font-bold text-gray-800">M</h1>
+                    <div class="flex space-x-1">
+                      <${ActionButton}
+                        icon="📌"
+                        label="Insert Node (INS/Enter)"
+                      />
+                      <${ActionButton}
+                        icon="✏️"
+                        label="Edit Node (Double Click)"
+                      />
+                      <${ActionButton} icon="🔗" label="Add Link (Ctrl+M)" />
+                      <${ActionButton} icon="🗑️" label="Delete Node (Delete)" />
+                    </div>
+                  </div>
+
+                  <div class="flex items-center space-x-2">
+                    <!-- Commenting out Show Data button for now
+                    <button
+                      class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                      onClick=${() => {
+                      const dataIslandContent =
+                        document.getElementById('initialData').textContent
+                      const parsedData = JSON.parse(dataIslandContent)
+                      alert(JSON.stringify(parsedData, null, 2))
+                      console.log(JSON.stringify(parsedData, null, 2))
+                    }}
+                    >
+                      👁️ Show Data
+                    </button>
+                    -->
+                    <button
+                      class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                      onClick=${async () => {
+                        var currentUser = null
+                        if (localStorage.getItem('nostr:privkey')) {
+                          // get public key from private key using secp256k1
+                          try {
+                            // add debug output
+                            console.log('Getting public key from private key')
+                            const privkey =
+                              localStorage.getItem('nostr:privkey')
+                            const pubkey = secp256k1.utils.bytesToHex(
+                              secp256k1.schnorr.getPublicKey(privkey)
+                            )
+                            currentUser = pubkey
+                          } catch (error) {
+                            console.error('Invalid private key:', error)
+                          }
+                        } else {
+                          var currentUser = await window.nostr.getPublicKey()
+                        }
+                        if (currentUser) {
+                          localStorage.setItem('currentUser', currentUser)
+
+                          // Construct the new URL
+                          const newUrl = `${window.location.origin}${window.location.pathname}?map=https://nosdav.net/${currentUser}/mm/index.json`
+
+                          // Push the new URL to the browser
+                          window.location.href = newUrl
+
+                          /*
+                            window.history.pushState({}, null, newUrl)
+
+                            // Fetch the data from the new URL
+                            fetch(`https://nosdav.net/${currentUser}/mm/index.json`)
+                              .then(response => response.json())
+                              .then(data => {
+                                initializeApp(data)
+                              })
+                              .catch(err => {
+                                console.error('Error fetching map data:', err)
+                                // Fallback to data island if fetch fails
+                                const data = JSON.parse(
+                                  document.querySelector('#initialData').textContent
+                                )
+                                initializeApp(data)
+                              })
+                              */
+                        }
+                      }}
+                    >
+                      🔐
+                    </button>
+                    <button
+                      class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                      onClick=${async () => {
+                        const dataIslandContent =
+                          document.getElementById('initialData').textContent
+                        const data = JSON.parse(dataIslandContent)
+                        const urlParams = new URLSearchParams(
+                          window.location.search
+                        )
+                        const mapFile = urlParams.get('map')
+                        if (mapFile) {
+                          try {
+                            const response = await fetch(mapFile, {
+                              method: 'PUT',
+                              headers: {
+                                'Content-Type': 'application/json'
+                              },
+                              body: JSON.stringify(data)
+                            })
+                            if (response.ok) {
+                              alert('Data saved successfully!')
+                            } else {
+                              alert('Error saving data.')
+                            }
+                          } catch (error) {
+                            alert('Error saving data: ' + error.message)
+                          }
+                        } else {
+                          alert('No map URL provided in query string.')
+                        }
+                      }}
+                    >
+                      💾
+                    </button>
+                    <button
+                      class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                      onClick=${() => this.reloadMap()}
+                    >
+                      🔄
+                    </button>
+                    <!-- Commenting out Share button
+                    <button
+                      class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                      onClick=${() => {
+                      const currentUrl = new URL(window.location.href)
+                      const mapValue = currentUrl.searchParams.get('map')
+                      if (mapValue) {
+                        const shareUrl = `https://mindstr.org/?map=${mapValue}`
+                        window.open(shareUrl, '_blank')
+                      } else {
+                        alert('No map URL found.')
+                      }
+                    }}
+                    >
+                      📤 Share
+                    </button>
+                    -->
+                  </div>
+
+                  <div class="flex items-center space-x-4">
+                    <div
+                      class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-semibold"
+                    >
+                      ${this.state.points}
+                    </div>
+                    <button
+                      class="px-3 py-1 text-sm bg-gray-200 rounded-md hover:bg-gray-300"
+                      onClick=${() => this.showShortcutsList()}
+                    >
+                      ⌨️
+                    </button>
+                  </div>
+                </div>
+              </nav>
+
+              <div id="nodeCreation" style="display:none">
+                <input
+                  ref=${el => (this.editInputRef = el)}
+                  type="text"
+                  value=${newNodeName}
+                  onInput=${e => this.handleInputChange(e)}
+                  placeholder="Node Name"
+                />
+                <button onclick=${() => this.handleNodeCreation()}>
+                  Add Node
+                </button>
+              </div>
+              <canvas
+                onmousedown=${e => this.handleCanvasMouseDown(e)}
+                onmousemove=${e => this.handleCanvasMouseMove(e)}
+                onmouseup=${e => this.handleCanvasMouseUp(e)}
+                ondblclick=${e => this.handleCanvasDoubleClick(e)}
+              ></canvas>
+
+              ${editingNode !== null
+                ? html`
+                    <input
+                      ref=${el => (this.editInputRef = el)}
+                      type="text"
+                      style=${`position: absolute; top: ${nodes[editingNode].y}px; left: ${nodes[editingNode].x}px;`}
+                      value=${nodes[editingNode].name}
+                      onblur=${e => {
+                        const updatedNodes = [...nodes]
+                        updatedNodes[editingNode].name = e.target.value
+                        this.setState({
+                          nodes: updatedNodes,
+                          editingNode: null
+                        })
+                        this.redraw()
+                      }}
+                      onkeydown=${e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          e.target.blur()
+                        }
+                      }}
+                    />
+                  `
+                : null}
+            </div>
+          `
+        }
+      }
+
+      const urlParams = new URLSearchParams(window.location.search)
+      const mapFile = urlParams.get('map')
+      const titleParam = urlParams.get('title')
+      const relay = urlParams.get('relay')
+
+      // Simple NIP-98 event listener
+      if (relay) {
+        const socket = new WebSocket(relay)
+        socket.onopen = () => {
+          socket.send(
+            JSON.stringify([
+              'REQ',
+              'nip98',
+              {
+                authors: [
+                  'f0af4014cb7338fab15f68e116cb537d4008cdd63c7cc0a3a7efcb2db23c0a68'
+                ]
+              }
+            ])
+          )
+        }
+        socket.onmessage = e => {
+          const data = JSON.parse(e.data)
+          if (data[0] === 'EVENT' && data[1] === 'nip98')
+            console.log('NIP-98 event received:', data[2])
+
+          this.reloadMap()
+        }
+      }
+
+      if (mapFile) {
+        fetch(mapFile)
+          .then(response => response.json())
+          .then(data => {
+            if (titleParam) {
+              data.nodes[0].name = titleParam
+            }
+            initializeApp(data)
+          })
+          .catch(err => {
+            console.error('Error fetching map data:', err)
+            // Fallback to data island if fetch fails
+            const data = JSON.parse(
+              document.querySelector('#initialData').textContent
+            )
+            if (titleParam) {
+              data.nodes[0].name = titleParam
+            }
+            initializeApp(data)
+          })
+      } else {
+        // Default to data island if no map parameter is provided
+        const data = JSON.parse(
+          document.querySelector('#initialData').textContent
+        )
+        if (titleParam) {
+          data.nodes[0].name = titleParam
+        }
+        initializeApp(data)
+      }
+
+      function initializeApp(data) {
+        console.log('Initializing app with data:', data)
+
+        if (!data.nodes || !data.connections) {
+          console.error("Fetched data doesn't have the expected structure.")
+          return
+        }
+
+        // Check for version and set it if not present
+        if (!data.version) {
+          data.version = '0.1'
+        }
+
+        // Set the ID of the main node to '#this'
+        if (data.nodes.length > 0) {
+          data.nodes[0]['@id'] = '#this'
+        }
+
+        // If there's no selected node, set it to the root node (index 0)
+        if (data.selectedNode === undefined && data.nodes.length > 0) {
+          data.selectedNode = 0
+        }
+
+        render(
+          html`<${MindMap} data=${data} selectedNode=${data.selectedNode} />`,
+          document.getElementById('app')
+        )
+      }
+    </script>
+  </body>
+</html>

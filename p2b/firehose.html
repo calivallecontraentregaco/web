@@ -1,0 +1,2401 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nostr App</title>
+    <script src="https://unpkg.com/preact@10.13.1/dist/preact.min.js"></script>
+    <script src="https://unpkg.com/preact@10.13.1/dist/preact-compat.min.js"></script>
+    <script src="https://unpkg.com/htm@3.1.1/dist/htm.js"></script>
+    <script src="https://unpkg.com/nostr-tools@1.12.0/lib/nostr.bundle.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+      :root {
+        --primary: #4a6fa5;
+        --primary-dark: #3a5683;
+        --primary-light: #c5d5e5;
+        --secondary: #8fb8de;
+        --accent: #63c0f5;
+        --text-light: #ffffff;
+        --text-dark: #334155;
+        --card-bg: #f0f7ff;
+        --body-bg: #f8fafc;
+        --sidebar-width: 230px;
+        --header-height: 60px;
+        --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+        --radius-sm: 6px;
+        --radius-md: 12px;
+
+        /* Firehose specific colors */
+        --event-bg: white;
+        --event-border: rgba(99, 192, 245, 0.2);
+        --event-hover-bg: #f5f9ff;
+        --tag-bg: #e7f2ff;
+        --tag-text: var(--primary);
+        --status-connected: #4ade80;
+        --status-disconnected: #f87171;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      }
+
+      body {
+        background-color: var(--body-bg);
+        color: var(--text-dark);
+        line-height: 1.5;
+      }
+
+      .header {
+        background: linear-gradient(
+          135deg,
+          var(--primary),
+          var(--primary-dark)
+        );
+        color: var(--text-light);
+        height: var(--header-height);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 25px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .logo {
+        font-size: 26px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        letter-spacing: -0.5px;
+      }
+
+      .logo-dot {
+        color: var(--accent);
+        font-size: 32px;
+        margin-left: -3px;
+      }
+
+      .sidebar {
+        background: linear-gradient(180deg, var(--primary-dark), #2d4569);
+        color: var(--text-light);
+        width: var(--sidebar-width);
+        position: fixed;
+        top: var(--header-height);
+        left: 0;
+        bottom: 0;
+        padding: 25px 0;
+        overflow-y: auto;
+        box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.1);
+      }
+
+      .sidebar-title {
+        padding: 10px 25px;
+        font-size: 18px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        color: rgba(255, 255, 255, 0.85);
+        margin-bottom: 5px;
+      }
+
+      .sidebar-menu {
+        list-style: none;
+        margin-top: 5px;
+      }
+
+      .sidebar-item {
+        padding: 12px 25px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        transition: all 0.2s ease;
+        font-size: 15px;
+        border-left: 3px solid transparent;
+      }
+
+      .sidebar-item:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+
+      .sidebar-item.active {
+        background-color: rgba(255, 255, 255, 0.15);
+        border-left: 3px solid var(--accent);
+      }
+
+      .sidebar-item-icon {
+        margin-right: 12px;
+        font-size: 12px;
+        color: var(--accent);
+      }
+
+      .main-content {
+        margin-left: var(--sidebar-width);
+        margin-top: var(--header-height);
+        padding: 35px;
+        min-height: calc(100vh - var(--header-height));
+      }
+
+      .section-title {
+        font-size: 30px;
+        font-weight: 700;
+        margin-bottom: 25px;
+        color: var(--primary-dark);
+        letter-spacing: -0.5px;
+      }
+
+      .controls-container {
+        background-color: white;
+        border-radius: var(--radius-md);
+        padding: 20px;
+        margin-bottom: 25px;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid rgba(0, 0, 0, 0.04);
+      }
+
+      .controls-row {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        margin-bottom: 15px;
+      }
+
+      @media (min-width: 768px) {
+        .controls-row {
+          flex-direction: row;
+        }
+      }
+
+      .control-group {
+        flex: 1;
+      }
+
+      .control-label {
+        display: block;
+        font-size: 14px;
+        font-weight: 500;
+        margin-bottom: 8px;
+        color: var(--primary-dark);
+      }
+
+      .select-input {
+        width: 100%;
+        background-color: var(--body-bg);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: var(--radius-sm);
+        padding: 10px 12px;
+        font-size: 14px;
+        outline: none;
+        transition: all 0.2s ease;
+      }
+
+      .select-input:focus,
+      .text-input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(99, 192, 245, 0.2);
+      }
+
+      .custom-relay-form {
+        display: flex;
+      }
+
+      .text-input {
+        flex: 1;
+        background-color: var(--body-bg);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+        padding: 10px 12px;
+        font-size: 14px;
+        outline: none;
+      }
+
+      .submit-button {
+        background-color: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+        padding: 0 20px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .submit-button:hover {
+        background-color: var(--primary-dark);
+      }
+
+      .submit-button:disabled {
+        background-color: #a0aec0;
+        cursor: not-allowed;
+      }
+
+      .note-form-container {
+        margin-bottom: 20px;
+      }
+
+      .note-textarea {
+        width: 100%;
+        min-height: 80px;
+        border-radius: var(--radius-sm);
+        resize: vertical;
+        background-color: var(--body-bg);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        padding: 12px;
+        font-size: 14px;
+        outline: none;
+        transition: all 0.2s ease;
+        margin-bottom: 10px;
+      }
+
+      .note-textarea:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(99, 192, 245, 0.2);
+      }
+
+      .full-width-button {
+        width: 100%;
+        border-radius: var(--radius-sm);
+        padding: 10px;
+        font-weight: 500;
+      }
+
+      .view-mode-container {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+      }
+
+      .view-mode-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 8px;
+      }
+
+      .view-mode-button {
+        background-color: var(--body-bg);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: var(--radius-sm);
+        padding: 8px 16px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .view-mode-button:hover {
+        background-color: var(--primary-light);
+      }
+
+      .view-mode-button.active {
+        background-color: var(--primary);
+        color: white;
+        border-color: var(--primary);
+      }
+
+      .debug-button {
+        background-color: var(--body-bg);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: var(--radius-sm);
+        padding: 6px 12px;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-top: 10px;
+      }
+
+      .debug-button:hover {
+        background-color: var(--primary-light);
+      }
+
+      .status-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 10px;
+      }
+
+      .connection-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+      }
+
+      .status-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+      }
+
+      .connected {
+        background-color: var(--status-connected);
+      }
+
+      .disconnected {
+        background-color: var(--status-disconnected);
+      }
+
+      .relay-url {
+        color: var(--primary);
+        font-size: 14px;
+      }
+
+      .auto-scroll-toggle {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .toggle-switch {
+        position: relative;
+        width: 40px;
+        height: 20px;
+        background-color: #e2e8f0;
+        border-radius: 20px;
+        margin-right: 8px;
+        transition: all 0.2s ease;
+      }
+
+      .toggle-switch::after {
+        content: '';
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background-color: white;
+        top: 1px;
+        left: 1px;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+
+      .toggle-switch.active {
+        background-color: var(--primary);
+      }
+
+      .toggle-switch.active::after {
+        left: 21px;
+      }
+
+      /* Login button styling */
+      .theme-container {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .theme-select {
+        background-color: rgba(255, 255, 255, 0.15);
+        color: white;
+        border: none;
+        border-radius: var(--radius-sm);
+        padding: 8px 16px;
+        outline: none;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .theme-select:hover {
+        background-color: rgba(255, 255, 255, 0.25);
+      }
+
+      .error-message {
+        color: var(--status-disconnected);
+        font-size: 14px;
+        margin-top: 8px;
+      }
+
+      .events-container {
+        background-color: white;
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        overflow: auto;
+        height: calc(100vh - 300px);
+      }
+
+      .events-placeholder {
+        text-align: center;
+        padding: 50px 0;
+        color: #94a3b8;
+        font-size: 16px;
+      }
+
+      .events-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 20px;
+      }
+
+      .event-card {
+        background-color: var(--event-bg);
+        border: 1px solid var(--event-border);
+        border-radius: var(--radius-md);
+        padding: 20px;
+        transition: all 0.3s ease;
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 16px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .event-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-md);
+        background-color: var(--event-hover-bg);
+      }
+
+      .event-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: linear-gradient(
+          to bottom,
+          var(--primary),
+          var(--accent, #8b5cf6)
+        );
+        opacity: 0.6;
+      }
+
+      .event-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 14px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      }
+
+      .event-kind {
+        font-family: monospace;
+        font-size: 12px;
+        background-color: var(--tag-bg);
+        color: var(--tag-text);
+        padding: 3px 8px;
+        border-radius: var(--radius-sm);
+        margin-right: 8px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      }
+
+      .event-id {
+        font-size: 13px;
+        color: #64748b;
+        transition: all 0.2s ease;
+      }
+
+      .event-id:hover {
+        color: var(--primary);
+      }
+
+      .event-timestamp {
+        font-size: 12px;
+        color: #94a3b8;
+        background-color: rgba(0, 0, 0, 0.03);
+        padding: 2px 8px;
+        border-radius: var(--radius-sm);
+      }
+
+      .event-content {
+        margin-bottom: 12px;
+        position: relative;
+      }
+
+      .content-metadata {
+        background-color: var(--card-bg);
+        padding: 12px;
+        border-radius: var(--radius-sm);
+      }
+
+      .content-text {
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 15px;
+        line-height: 1.5;
+        color: var(--text-color, #2d3748);
+        padding: 12px 16px;
+        border-radius: 10px;
+        background-color: var(--content-bg, rgba(255, 255, 255, 0.5));
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+        border-left: 3px solid var(--primary, #3b82f6);
+        margin: 4px 0;
+      }
+
+      .content-text a {
+        color: var(--primary, #3b82f6);
+        text-decoration: none;
+        border-bottom: 1px dotted var(--primary, #3b82f6);
+        transition: all 0.2s ease;
+      }
+
+      .content-text a:hover {
+        border-bottom: 1px solid var(--primary, #3b82f6);
+      }
+
+      .content-dm {
+        font-style: italic;
+        color: #94a3b8;
+        font-size: 14px;
+      }
+
+      .content-repost {
+        border-left: 3px solid var(--primary);
+        padding-left: 12px;
+      }
+
+      .content-json {
+        background-color: var(--card-bg);
+        padding: 10px;
+        border-radius: var(--radius-sm);
+        overflow: auto;
+        font-family: monospace;
+        font-size: 12px;
+        white-space: pre;
+      }
+
+      .event-meta {
+        font-size: 12px;
+        font-family: monospace;
+        color: #64748b;
+      }
+
+      .event-tags {
+        margin-top: 8px;
+      }
+
+      .tags-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+
+      .tag-name {
+        color: var(--primary);
+        padding-right: 8px;
+      }
+
+      .tag-value {
+        max-width: 300px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .event-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 12px;
+      }
+
+      .action-button {
+        font-size: 12px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px 0;
+        transition: all 0.2s ease;
+      }
+
+      .log-action {
+        color: var(--primary);
+      }
+
+      .log-action:hover {
+        color: var(--primary-dark);
+      }
+
+      .copy-action {
+        color: #10b981;
+      }
+
+      .copy-action:hover {
+        color: #059669;
+      }
+
+      .events-footer {
+        text-align: center;
+        padding: 16px;
+        font-size: 13px;
+        color: #64748b;
+      }
+
+      .mention {
+        color: var(--primary, #3b82f6);
+        font-weight: 500;
+      }
+
+      .hashtag {
+        color: var(--accent, #8b5cf6);
+        font-weight: 500;
+      }
+
+      @media (max-width: 768px) {
+        .sidebar {
+          display: none;
+        }
+
+        .main-content {
+          margin-left: 0;
+          padding: 20px;
+        }
+
+        .events-container {
+          height: calc(100vh - 280px);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <script>
+      const { h, render, Component } = preact
+      const html = htm.bind(h)
+
+      // Header component
+      const Header = ({ user, onLogin, onLogout }) => {
+        const displayText = user
+          ? user.pubkey.substring(0, 8)
+          : 'Login with Nostr'
+
+        return html`
+          <header class="header">
+            <a
+              href="/"
+              class="logo"
+              style="text-decoration: none; color: var(--text-light);"
+              >Nostr<span class="logo-dot">.</span>App</a
+            >
+            <div class="theme-container">
+              ${user
+                ? html`<button onClick=${onLogout} class="theme-select">
+                    Logout (${displayText})
+                  </button>`
+                : html`<button onClick=${onLogin} class="theme-select">
+                    Login with Nostr
+                  </button>`}
+            </div>
+          </header>
+        `
+      }
+
+      // Sidebar component
+      const Sidebar = () => {
+        const sidebarItems = [
+          { id: 1, name: 'Firehose', icon: '▶', active: true }
+        ]
+
+        return html`
+          <div class="sidebar">
+            <div class="sidebar-title">Navigation</div>
+            <ul class="sidebar-menu">
+              ${sidebarItems.map(
+                item => html`
+                  <li class="sidebar-item ${item.active ? 'active' : ''}">
+                    <span class="sidebar-item-icon">${item.icon}</span>
+                    ${item.name}
+                  </li>
+                `
+              )}
+            </ul>
+          </div>
+        `
+      }
+
+      class NostrFirehose extends Component {
+        constructor(props) {
+          super(props)
+          this.state = {
+            events: [],
+            connected: false,
+            relay: this.getRelayFromQueryString() || 'wss://relay.damus.io',
+            customRelay: '',
+            error: null,
+            maxEvents: 100,
+            autoScroll: true,
+            user: null,
+            pubkey: localStorage.getItem('pubkey') || null,
+            privkey: localStorage.getItem('nostr:privkey') || null,
+            newNoteContent: '',
+            following: [],
+            viewMode: 'all',
+            isRefreshingFollows: false,
+            debugInfo: {
+              followsAttempted: false,
+              receivedEvents: [],
+              lastError: null
+            },
+            searchingAllRelays: false
+          }
+          this.relayConnection = null
+          this.handleEvent = this.handleEvent.bind(this)
+          this.connectToRelay = this.connectToRelay.bind(this)
+          this.handleRelayChange = this.handleRelayChange.bind(this)
+          this.handleCustomRelayChange = this.handleCustomRelayChange.bind(this)
+          this.handleCustomRelaySubmit = this.handleCustomRelaySubmit.bind(this)
+          this.toggleAutoScroll = this.toggleAutoScroll.bind(this)
+          this.handleLogin = this.handleLogin.bind(this)
+          this.handleLogout = this.handleLogout.bind(this)
+          this.handleNoteContentChange = this.handleNoteContentChange.bind(this)
+          this.publishNote = this.publishNote.bind(this)
+          this.fetchFollowingList = this.fetchFollowingList.bind(this)
+          this.setViewMode = this.setViewMode.bind(this)
+          this.refreshFollowList = this.refreshFollowList.bind(this)
+          this.showDebugInfo = this.showDebugInfo.bind(this)
+          this.searchAllRelaysForFollows =
+            this.searchAllRelaysForFollows.bind(this)
+        }
+
+        getRelayFromQueryString() {
+          const params = new URLSearchParams(window.location.search)
+          return params.get('relay')
+        }
+
+        componentDidMount() {
+          this.connectToRelay()
+          // Check if user is logged in via Nostr
+          this.checkNostrLogin()
+
+          // Check for private key in URL hash
+          const hash = window.location.hash.substring(1) // Remove the # character
+          if (hash && hash.length === 64 && /^[0-9a-fA-F]+$/.test(hash)) {
+            // Valid private key in hash, use it to login
+            this.loginWithPrivkey(hash)
+
+            // Clean URL by removing the hash to protect privacy
+            window.history.replaceState(
+              null,
+              null,
+              window.location.pathname + window.location.search
+            )
+          }
+        }
+
+        checkNostrLogin() {
+          // Check if user is already logged in
+          if (
+            localStorage.getItem('loggedIn') === 'true' &&
+            localStorage.getItem('pubkey')
+          ) {
+            const pubkey = localStorage.getItem('pubkey')
+            this.setState({ user: { pubkey } }, () => {
+              // Fetch following list after login check
+              this.fetchFollowingList()
+            })
+          }
+        }
+
+        handleLogin() {
+          Swal.fire({
+            title: 'Login',
+            html: `
+              <button id="extensionLogin" class="swal2-confirm swal2-styled" style="display:block; width:100%; margin:10px auto;">Sign in with Nostr extension</button>
+              <input id="privkeyInput" type="text" placeholder="Or enter your 64-character hex private key" class="swal2-input" style="display:block; width:100%; margin:10px auto;">
+              <p style="margin-top: 10px; font-size: 0.9em;"><a href="https://nostrapps.github.io/extensions/" target="_blank">What is a Nostr extension?</a></p>
+            `,
+            showConfirmButton: false,
+            showCloseButton: true,
+            focusConfirm: false,
+            didOpen: () => {
+              const extensionButton =
+                Swal.getPopup().querySelector('#extensionLogin')
+              const privkeyInput =
+                Swal.getPopup().querySelector('#privkeyInput')
+
+              extensionButton.addEventListener('click', () => {
+                Swal.clickConfirm()
+              })
+
+              privkeyInput.addEventListener('keyup', e => {
+                if (e.key === 'Enter') {
+                  Swal.clickConfirm()
+                }
+              })
+
+              // Add paste event listener
+              privkeyInput.addEventListener('paste', e => {
+                setTimeout(() => {
+                  if (
+                    privkeyInput.value.length === 64 &&
+                    /^[0-9a-fA-F]+$/.test(privkeyInput.value)
+                  ) {
+                    Swal.clickConfirm()
+                  }
+                }, 0)
+              })
+            },
+            preConfirm: () => {
+              const privkey =
+                Swal.getPopup().querySelector('#privkeyInput').value
+              if (
+                privkey &&
+                (privkey.length !== 64 || !/^[0-9a-fA-F]+$/.test(privkey))
+              ) {
+                Swal.showValidationMessage(
+                  'Invalid private key format. Please enter a 64-character hex string.'
+                )
+                return false
+              }
+              return {
+                loginMethod: privkey ? 'privkey' : 'extension',
+                privkey
+              }
+            }
+          }).then(result => {
+            if (result.isConfirmed) {
+              if (result.value.loginMethod === 'privkey') {
+                this.loginWithPrivkey(result.value.privkey)
+              } else {
+                // Check for localStorage privkey first
+                const storedPrivkey = localStorage.getItem('nostr:privkey')
+                if (storedPrivkey) {
+                  this.loginWithPrivkey(storedPrivkey)
+                } else {
+                  this.loginWithExtension()
+                }
+              }
+            }
+          })
+        }
+
+        loginWithExtension() {
+          if (window.nostr) {
+            try {
+              window.nostr
+                .getPublicKey()
+                .then(pubkey => {
+                  this.setState({ user: { pubkey } }, () => {
+                    localStorage.setItem('loggedIn', 'true')
+                    localStorage.setItem('pubkey', pubkey)
+                    Swal.fire({
+                      title: 'Logged in!',
+                      text: 'You have successfully logged in with your Nostr extension.',
+                      icon: 'success',
+                      timer: 1500,
+                      showConfirmButton: false
+                    })
+                    // Fetch following list first, then reconnect when it's done
+                    this.fetchFollowingList()
+                  })
+                })
+                .catch(err => {
+                  console.error('Login failed:', err)
+                  Swal.fire({
+                    title: 'Login Failed',
+                    text: 'There was an error logging in with your Nostr extension.',
+                    icon: 'error',
+                    showConfirmButton: true
+                  })
+                })
+            } catch (error) {
+              console.error('Login error:', error)
+              Swal.fire({
+                title: 'Login Error',
+                text: 'Error connecting to Nostr extension: ' + error.message,
+                icon: 'error',
+                showConfirmButton: true
+              })
+            }
+          } else {
+            Swal.fire({
+              title: 'Extension Not Found',
+              text: 'Nostr extension not found. Please install a Nostr browser extension.',
+              icon: 'warning',
+              showConfirmButton: true
+            })
+          }
+        }
+
+        loginWithPrivkey(privkey) {
+          if (privkey && window.NostrTools) {
+            try {
+              const pubkey = window.NostrTools.getPublicKey(privkey)
+              this.setState({ user: { pubkey }, privkey }, () => {
+                localStorage.setItem('loggedIn', 'true')
+                localStorage.setItem('pubkey', pubkey)
+                localStorage.setItem('nostr:privkey', privkey)
+                Swal.fire({
+                  title: 'Logged in!',
+                  text: 'You have successfully logged in with your private key.',
+                  icon: 'success',
+                  timer: 1500,
+                  showConfirmButton: false
+                })
+                // Fetch following list first, then reconnect when it's done
+                this.fetchFollowingList()
+              })
+            } catch (error) {
+              console.error('Login failed:', error)
+              Swal.fire({
+                title: 'Login Failed',
+                text: 'There was an error generating the public key from the provided private key.',
+                icon: 'error',
+                showConfirmButton: true
+              })
+            }
+          }
+        }
+
+        handleLogout() {
+          this.setState(
+            {
+              user: null,
+              privkey: null,
+              following: [],
+              viewMode: 'all'
+            },
+            () => {
+              localStorage.setItem('loggedIn', 'false')
+              localStorage.removeItem('pubkey')
+              localStorage.removeItem('nostr:privkey')
+
+              Swal.fire({
+                title: 'Logged out!',
+                text: 'You have successfully logged out.',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+              })
+
+              // Reconnect to show all events again
+              this.connectToRelay()
+            }
+          )
+        }
+
+        componentWillUnmount() {
+          if (this.relayConnection) {
+            this.relayConnection.close()
+          }
+        }
+
+        connectToRelay() {
+          try {
+            if (this.relayConnection) {
+              this.relayConnection.close()
+            }
+
+            this.setState({ connected: false, error: null, events: [] })
+
+            console.log(`Connecting to relay: ${this.state.relay}`)
+
+            this.relayConnection = window.NostrTools.relayInit(this.state.relay)
+
+            this.relayConnection.on('connect', () => {
+              console.log(`Connected to ${this.state.relay}`)
+              this.setState({ connected: true, error: null })
+
+              // Define our filter based on view mode
+              let filter = { kinds: [1], limit: 20 }
+
+              if (this.state.user && this.state.user.pubkey) {
+                const pubkey = this.state.user.pubkey
+                console.log(
+                  `User is logged in with pubkey: ${pubkey.substring(0, 8)}...`
+                )
+                console.log(`Current view mode: ${this.state.viewMode}`)
+
+                // Filter based on view mode
+                switch (this.state.viewMode) {
+                  case 'mine':
+                    // Only my events
+                    filter = {
+                      kinds: [1], // Just text notes
+                      authors: [pubkey],
+                      limit: 20
+                    }
+                    console.log('Using filter for my events')
+                    break
+
+                  case 'following':
+                    // Only events from people I follow
+                    if (this.state.following.length > 0) {
+                      // If we have follows, filter for them
+                      filter = {
+                        kinds: [1],
+                        authors: this.state.following,
+                        limit: 50
+                      }
+                      console.log(
+                        `Using filter for ${this.state.following.length} follows`
+                      )
+                    } else {
+                      // No follows found
+                      console.log('No follows found, using default filter')
+                      this.setState({
+                        error:
+                          'No follows found in your contacts list. You may need to create a contacts list on this relay.'
+                      })
+                    }
+                    break
+
+                  default: // 'all'
+                    // Default filter for all events
+                    console.log('Using default filter for all events')
+                    break
+                }
+              }
+
+              console.log('Subscribing with filter:', filter)
+
+              // Subscribe to events with the filter
+              const sub = this.relayConnection.sub([filter])
+
+              sub.on('event', event => {
+                this.handleEvent(event)
+              })
+
+              sub.on('eose', () => {
+                console.log('End of stored events')
+              })
+            })
+
+            this.relayConnection.on('error', error => {
+              console.error(`Relay error: ${error}`)
+              this.setState({
+                error: `Failed to connect: ${error}`,
+                connected: false
+              })
+            })
+
+            this.relayConnection.on('disconnect', () => {
+              console.log('Disconnected from relay')
+              this.setState({ connected: false })
+            })
+
+            this.relayConnection.connect()
+          } catch (error) {
+            console.error('Connection error:', error)
+            this.setState({
+              error: `Error: ${error.message}`,
+              connected: false
+            })
+          }
+        }
+
+        handleEvent(event) {
+          console.log('Received event:', event)
+
+          this.setState(prevState => {
+            const newEvents = [...prevState.events, event]
+
+            // Limit the number of events to prevent memory issues
+            if (newEvents.length > this.state.maxEvents) {
+              newEvents.length = this.state.maxEvents
+            }
+
+            return { events: newEvents }
+          })
+
+          if (this.state.autoScroll && this.eventsContainer) {
+            this.eventsContainer.scrollTop = 0
+          }
+        }
+
+        handleRelayChange(e) {
+          const relay = e.target.value
+          this.setState({ relay }, () => {
+            // Update URL with the new relay
+            const url = new URL(window.location)
+            url.searchParams.set('relay', relay)
+            window.history.pushState({}, '', url)
+
+            this.connectToRelay()
+          })
+        }
+
+        handleCustomRelayChange(e) {
+          this.setState({ customRelay: e.target.value })
+        }
+
+        handleCustomRelaySubmit(e) {
+          e.preventDefault()
+          if (this.state.customRelay) {
+            this.setState(
+              { relay: this.state.customRelay, customRelay: '' },
+              () => {
+                // Update URL with the new relay
+                const url = new URL(window.location)
+                url.searchParams.set('relay', this.state.relay)
+                window.history.pushState({}, '', url)
+
+                this.connectToRelay()
+              }
+            )
+          }
+        }
+
+        toggleAutoScroll() {
+          this.setState(prevState => ({ autoScroll: !prevState.autoScroll }))
+        }
+
+        formatTimestamp(timestamp) {
+          return new Date(timestamp * 1000).toLocaleString()
+        }
+
+        getEventKindName(kind) {
+          const kinds = {
+            0: 'Metadata',
+            1: 'Text Note',
+            2: 'Recommend Relay',
+            3: 'Contacts',
+            4: 'Direct Message',
+            5: 'Deletion',
+            6: 'Repost',
+            7: 'Reaction',
+            40: 'Channel Creation',
+            41: 'Channel Metadata',
+            42: 'Channel Message',
+            43: 'Channel Hide Message',
+            44: 'Channel Mute User'
+          }
+          return kinds[kind] || `Kind ${kind}`
+        }
+
+        formatContent(event) {
+          try {
+            switch (event.kind) {
+              case 0: // Metadata
+                const metadata = JSON.parse(event.content)
+                return html`
+                  <div class="content-metadata">
+                    ${metadata.name &&
+                    html`<div><strong>Name:</strong> ${metadata.name}</div>`}
+                    ${metadata.display_name &&
+                    html`<div>
+                      <strong>Display Name:</strong> ${metadata.display_name}
+                    </div>`}
+                    ${metadata.about &&
+                    html`<div><strong>About:</strong> ${metadata.about}</div>`}
+                    ${metadata.picture &&
+                    html`<div style="margin-top: 8px;">
+                      <img
+                        src=${metadata.picture}
+                        style="width: 64px; height: 64px; border-radius: 4px;"
+                        alt="Profile"
+                      />
+                    </div>`}
+                  </div>
+                `
+              case 1: // Text Note
+                // Process all text notes using line-by-line analysis for consistent behavior
+                const lines = event.content.split('\n')
+                const contentElements = []
+
+                // Expanded list of known image hosting services
+                const isImageUrl = url => {
+                  // Standard image extensions
+                  if (url.match(/\.(png|jpg|jpeg|gif|webp)(\?[^\s]*)?$/i)) {
+                    return true
+                  }
+
+                  // Known image hosting services
+                  if (
+                    url.includes('media.ditto.pub/') ||
+                    url.includes('images2.imgbox.com/') ||
+                    url.includes('imgbox.com/') ||
+                    url.includes('i.imgur.com/')
+                  ) {
+                    return true
+                  }
+
+                  return false
+                }
+
+                // Check if URL is a video file
+                const isVideoUrl = url => {
+                  // Standard video extensions
+                  if (url.match(/\.(mp4|mov|webm|avi|wmv|mkv)(\?[^\s]*)?$/i)) {
+                    return true
+                  }
+
+                  // Specific video hosting services
+                  if (url.includes('m.primal.net/') && url.includes('.mov')) {
+                    return true
+                  }
+
+                  return false
+                }
+
+                lines.forEach(line => {
+                  const trimmedLine = line.trim()
+                  if (!trimmedLine) {
+                    // Empty line, add a line break
+                    contentElements.push(html`<br />`)
+                    return
+                  }
+
+                  // Check if line is a URL
+                  const urlMatch = trimmedLine.match(/https?:\/\/[^\s]+/)
+                  if (urlMatch) {
+                    const url = urlMatch[0]
+
+                    // If it's a video URL, display as video
+                    if (isVideoUrl(url)) {
+                      contentElements.push(
+                        html`<div style="margin: 10px 0;">
+                          <video
+                            controls
+                            style="max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"
+                            preload="metadata"
+                          >
+                            <source src=${url} />
+                            Your browser does not support the video tag.
+                          </video>
+                        </div>`
+                      )
+                    }
+                    // If it's an image URL, display as image
+                    else if (isImageUrl(url)) {
+                      contentElements.push(
+                        html`<div style="margin: 10px 0;">
+                          <img
+                            src=${url}
+                            style="max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"
+                            alt="Nostr media"
+                            loading="lazy"
+                          />
+                        </div>`
+                      )
+                    } else {
+                      // Regular URL, not an image or video
+                      contentElements.push(
+                        html`<div>
+                          <a
+                            href=${url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            >${url}</a
+                          >
+                        </div>`
+                      )
+                    }
+                  } else {
+                    // Regular text with hashtag and mention formatting
+                    let processedLine = trimmedLine
+                      // Highlight nostr: npub mentions
+                      .replace(
+                        /(nostr:npub[a-zA-Z0-9]+)/g,
+                        '<span class="mention">$1</span>'
+                      )
+                      // Highlight hashtags
+                      .replace(
+                        /#([a-zA-Z0-9_]+)/g,
+                        '<span class="hashtag">#$1</span>'
+                      )
+
+                    contentElements.push(
+                      html`<div
+                        dangerouslySetInnerHTML=${{ __html: processedLine }}
+                      ></div>`
+                    )
+                  }
+                })
+
+                return html`<div class="content-text">${contentElements}</div>`
+              case 4: // DM
+                return html`<div class="content-dm">
+                  Encrypted direct message
+                </div>`
+              case 6: // Repost
+                try {
+                  const repostedEvent = JSON.parse(event.content)
+                  return html`
+                    <div class="content-repost">
+                      <div
+                        style="font-size: 13px; color: #94a3b8; margin-bottom: 4px;"
+                      >
+                        Reposted event:
+                      </div>
+                      <div class="content-text">
+                        ${repostedEvent.content ||
+                        JSON.stringify(repostedEvent, null, 2)}
+                      </div>
+                    </div>
+                  `
+                } catch {
+                  return html`<div class="content-text">${event.content}</div>`
+                }
+              case 7: // Reaction
+                return html`<div style="font-size: 24px; margin-bottom: 8px;">
+                  ${event.content}
+                </div>`
+              default:
+                // For other kinds, try to parse as JSON if it looks like JSON
+                if (
+                  event.content.trim().startsWith('{') &&
+                  event.content.trim().endsWith('}')
+                ) {
+                  try {
+                    const parsed = JSON.parse(event.content)
+                    return html`<pre class="content-json">
+${JSON.stringify(parsed, null, 2)}</pre
+                    >`
+                  } catch {
+                    return html`<div class="content-text">
+                      ${event.content}
+                    </div>`
+                  }
+                }
+                return html`<div class="content-text">${event.content}</div>`
+            }
+          } catch (error) {
+            console.error('Error formatting content:', error)
+            return html`<div class="content-text">${event.content}</div>`
+          }
+        }
+
+        handleNoteContentChange(e) {
+          this.setState({ newNoteContent: e.target.value })
+        }
+
+        async publishNote(e) {
+          e.preventDefault()
+
+          if (!this.state.newNoteContent.trim()) {
+            Swal.fire({
+              title: 'Empty Note',
+              text: 'Please enter some content for your note.',
+              icon: 'warning',
+              showConfirmButton: true
+            })
+            return
+          }
+
+          if (!this.state.connected) {
+            Swal.fire({
+              title: 'Not Connected',
+              text: 'Please connect to a relay first.',
+              icon: 'warning',
+              showConfirmButton: true
+            })
+            return
+          }
+
+          try {
+            // Create the event object
+            let event = {
+              kind: 1,
+              created_at: Math.floor(Date.now() / 1000),
+              tags: [],
+              content: this.state.newNoteContent,
+              pubkey: this.state.user.pubkey
+            }
+
+            // Sign the event
+            if (window.nostr && !this.state.privkey) {
+              // Use extension to sign
+              try {
+                event = await window.nostr.signEvent(event)
+              } catch (error) {
+                console.error('Signing error:', error)
+                Swal.fire({
+                  title: 'Signing Failed',
+                  text: 'Failed to sign the note with your extension.',
+                  icon: 'error',
+                  showConfirmButton: true
+                })
+                return
+              }
+            } else if (this.state.privkey) {
+              // Use local private key to sign
+              event.id = window.NostrTools.getEventHash(event)
+              event.sig = window.NostrTools.signEvent(event, this.state.privkey)
+            } else {
+              throw new Error('No signing method available')
+            }
+
+            // Validate the event
+            const ok = window.NostrTools.validateEvent(event)
+            const veryOk = window.NostrTools.verifySignature(event)
+
+            if (!ok || !veryOk) {
+              throw new Error('Invalid event or signature')
+            }
+
+            // Publish the event
+            const pub = this.relayConnection.publish(event)
+
+            pub.on('ok', () => {
+              console.log('Note published successfully')
+              this.setState({ newNoteContent: '' })
+
+              Swal.fire({
+                title: 'Published!',
+                text: 'Your note was published successfully.',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+              })
+            })
+
+            pub.on('failed', reason => {
+              console.error('Failed to publish note:', reason)
+              Swal.fire({
+                title: 'Publishing Failed',
+                text: `Failed to publish your note: ${reason}`,
+                icon: 'error',
+                showConfirmButton: true
+              })
+            })
+          } catch (error) {
+            console.error('Error publishing note:', error)
+            Swal.fire({
+              title: 'Error',
+              text: `Error creating or publishing note: ${error.message}`,
+              icon: 'error',
+              showConfirmButton: true
+            })
+          }
+        }
+
+        fetchFollowingList(isManualRefresh = false) {
+          // Only fetch if we have a user
+          if (!this.state.user || !this.state.user.pubkey) {
+            this.connectToRelay()
+            return
+          }
+
+          // Update debug info
+          this.setState(prevState => ({
+            debugInfo: {
+              ...prevState.debugInfo,
+              followsAttempted: true,
+              receivedEvents: [],
+              lastError: null
+            }
+          }))
+
+          console.log(
+            'Fetching following list for pubkey:',
+            this.state.user.pubkey
+          )
+
+          // Create a separate relay connection for fetching follows
+          const tmpRelay = window.NostrTools.relayInit(this.state.relay)
+
+          tmpRelay.on('connect', () => {
+            console.log('Connected to relay to fetch contacts (kind 3 event)')
+
+            // Try both NIP-02 contacts lists AND NIP-51 follow lists
+            // Per NIP-02, we need to fetch kind 3 events (contacts/follows)
+            const sub = tmpRelay.sub([
+              {
+                kinds: [3, 10002], // Include both NIP-02 contacts and NIP-51 lists
+                authors: [this.state.user.pubkey],
+                limit: 5 // Get a few recent ones to be safe
+              }
+            ])
+
+            let followers = []
+            let receivedEvents = []
+
+            sub.on('event', event => {
+              console.log(`Found event kind ${event.kind}:`, event)
+
+              // Save event for debugging
+              receivedEvents.push({
+                id: event.id,
+                kind: event.kind,
+                created_at: event.created_at,
+                tagCount: event.tags.length
+              })
+
+              // Kind 3 is traditional contact list
+              if (event.kind === 3) {
+                // Extract the pubkeys from 'p' tags according to NIP-02
+                const follows = event.tags
+                  .filter(tag => tag[0] === 'p' && tag.length > 1)
+                  .map(tag => tag[1])
+
+                if (follows.length > followers.length) {
+                  followers = follows
+                  console.log(
+                    `Found ${follows.length} follows in kind 3 contacts list`
+                  )
+                }
+              }
+              // Kind 10002 is NIP-51 contact list (newer format)
+              else if (event.kind === 10002) {
+                // Filter for 'p' tags
+                const follows = event.tags
+                  .filter(tag => tag[0] === 'p' && tag.length > 1)
+                  .map(tag => tag[1])
+
+                if (follows.length > followers.length) {
+                  followers = follows
+                  console.log(
+                    `Found ${follows.length} follows in kind 10002 follow list`
+                  )
+                }
+              }
+            })
+
+            // Handle "end of stored events"
+            sub.on('eose', () => {
+              console.log('End of stored contact events')
+              tmpRelay.close()
+
+              if (followers.length > 0) {
+                console.log(`Successfully found ${followers.length} follows`)
+              } else {
+                console.log('No follows found in the contacts list')
+              }
+
+              // Update state with the follows we found and connect
+              this.setState(
+                {
+                  following: followers,
+                  isRefreshingFollows: false,
+                  debugInfo: {
+                    followsAttempted: true,
+                    receivedEvents,
+                    lastError: null
+                  }
+                },
+                () => {
+                  this.connectToRelay()
+
+                  // Show a notification if this was a manual refresh
+                  if (isManualRefresh) {
+                    Swal.fire({
+                      title: 'Follows Refreshed',
+                      text:
+                        followers.length > 0
+                          ? `Found ${followers.length} accounts you follow`
+                          : 'No follows found in your contacts list on this relay',
+                      icon: followers.length > 0 ? 'success' : 'info',
+                      timer: 2000,
+                      showConfirmButton: false
+                    })
+                  }
+                }
+              )
+            })
+
+            // Set a timeout in case the relay doesn't return EOSE
+            setTimeout(() => {
+              if (tmpRelay) {
+                console.log('Timeout reached waiting for contacts')
+                tmpRelay.close()
+
+                // Update state with whatever we found and connect
+                this.setState(
+                  {
+                    following: followers,
+                    isRefreshingFollows: false,
+                    debugInfo: {
+                      followsAttempted: true,
+                      receivedEvents,
+                      lastError: 'Timeout while fetching follows'
+                    }
+                  },
+                  () => {
+                    this.connectToRelay()
+
+                    // Show a notification if this was a manual refresh
+                    if (isManualRefresh) {
+                      Swal.fire({
+                        title: 'Follows Refresh Timeout',
+                        text:
+                          'Refresh timed out, but found ' +
+                          (followers.length > 0
+                            ? followers.length + ' follows'
+                            : 'no follows'),
+                        icon: 'warning',
+                        timer: 2000,
+                        showConfirmButton: false
+                      })
+                    }
+                  }
+                )
+              }
+            }, 5000)
+          })
+
+          tmpRelay.on('error', err => {
+            console.error('Error fetching contacts:', err)
+            tmpRelay.close()
+
+            this.setState(
+              {
+                isRefreshingFollows: false,
+                debugInfo: {
+                  followsAttempted: true,
+                  receivedEvents: [],
+                  lastError: `Error: ${err}`
+                }
+              },
+              () => {
+                // Continue with connection anyway
+                this.connectToRelay()
+
+                // Show error notification if manual refresh
+                if (isManualRefresh) {
+                  Swal.fire({
+                    title: 'Refresh Error',
+                    text: 'Error refreshing follow list: ' + err,
+                    icon: 'error',
+                    showConfirmButton: true
+                  })
+                }
+              }
+            )
+          })
+
+          tmpRelay.connect()
+        }
+
+        setViewMode(mode) {
+          if (this.state.viewMode !== mode) {
+            this.setState({ viewMode: mode }, () => {
+              // Reconnect with the new filter
+              this.connectToRelay()
+            })
+          }
+        }
+
+        refreshFollowList() {
+          if (
+            !this.state.user ||
+            !this.state.user.pubkey ||
+            this.state.isRefreshingFollows
+          ) {
+            return
+          }
+
+          // Set refreshing flag
+          this.setState({ isRefreshingFollows: true }, () => {
+            console.log('Manually refreshing follow list...')
+
+            // Call the follow list function
+            this.fetchFollowingList(true)
+          })
+        }
+
+        showDebugInfo() {
+          const { user, debugInfo, relay, searchingAllRelays } = this.state
+
+          if (!user) {
+            Swal.fire({
+              title: 'Not Logged In',
+              text: 'You need to be logged in to view debug information',
+              icon: 'info'
+            })
+            return
+          }
+
+          let debugHtml = `
+            <div style="text-align: left; font-size: 14px;">
+              <h3>Debug Information:</h3>
+              <p><strong>Current relay:</strong> ${relay}</p>
+              <p><strong>User pubkey:</strong> ${user.pubkey.substring(
+                0,
+                8
+              )}...${user.pubkey.substring(user.pubkey.length - 4)}</p>
+              <p><strong>Follows fetch attempted:</strong> ${
+                debugInfo.followsAttempted ? 'Yes' : 'No'
+              }</p>
+              <p><strong>Follows count:</strong> ${
+                this.state.following.length
+              }</p>
+              ${
+                debugInfo.lastError
+                  ? `<p><strong>Last error:</strong> ${debugInfo.lastError}</p>`
+                  : ''
+              }
+              
+              <h4>Received Events (${debugInfo.receivedEvents.length}):</h4>
+              ${
+                debugInfo.receivedEvents.length === 0
+                  ? '<p>No events received from relay. This means:</p><ul>' +
+                    '<li>You may not have a contacts list on this relay</li>' +
+                    '<li>The relay might not be returning your contacts</li>' +
+                    '<li>Try connecting to a different relay</li></ul>'
+                  : '<table style="width:100%; border-collapse: collapse;">' +
+                    '<tr><th style="text-align:left; border-bottom: 1px solid #ccc;">Kind</th>' +
+                    '<th style="text-align:left; border-bottom: 1px solid #ccc;">Created</th>' +
+                    '<th style="text-align:left; border-bottom: 1px solid #ccc;">Tag Count</th></tr>' +
+                    debugInfo.receivedEvents
+                      .map(
+                        event =>
+                          `<tr>` +
+                          `<td>${event.kind}</td>` +
+                          `<td>${new Date(
+                            event.created_at * 1000
+                          ).toLocaleString()}</td>` +
+                          `<td>${event.tagCount}</td>` +
+                          `</tr>`
+                      )
+                      .join('') +
+                    '</table>'
+              }
+              
+              <h4>Next Steps:</h4>
+              <ol>
+                <li>Make sure you've created a contacts list with an app like <a href="https://damus.io/" target="_blank">Damus</a>, <a href="https://snort.social/" target="_blank">Snort</a>, or <a href="https://primal.net/" target="_blank">Primal</a></li>
+                <li>Try connecting to different relays (some may have your contacts, others may not)</li>
+                <li>If you're using multiple apps, they may be using different relays</li>
+                <li>Your contacts might be stored in a different format (Kind 3 vs Kind 10002)</li>
+              </ol>
+              
+              <div style="margin-top: 15px;">
+                <button id="searchAllRelaysBtn" class="swal2-confirm swal2-styled" ${
+                  searchingAllRelays ? 'disabled' : ''
+                }>
+                  ${
+                    searchingAllRelays
+                      ? 'Searching for follows...'
+                      : 'Search All Popular Relays for Follows'
+                  }
+                </button>
+              </div>
+            </div>
+          `
+
+          Swal.fire({
+            title: 'Follows List Debug Info',
+            html: debugHtml,
+            width: '600px',
+            showConfirmButton: true,
+            didOpen: () => {
+              const searchBtn = document.getElementById('searchAllRelaysBtn')
+              if (searchBtn) {
+                searchBtn.addEventListener('click', () => {
+                  Swal.close()
+                  this.searchAllRelaysForFollows()
+                })
+              }
+            }
+          })
+        }
+
+        searchAllRelaysForFollows() {
+          if (
+            !this.state.user ||
+            !this.state.user.pubkey ||
+            this.state.searchingAllRelays
+          ) {
+            return
+          }
+
+          // Popular relays to check
+          const relaysToCheck = [
+            'wss://relay.damus.io',
+            'wss://relay.snort.social',
+            'wss://nos.lol',
+            'wss://relay.primal.net',
+            'wss://relay.nostr.band',
+            'wss://purplepag.es',
+            'wss://relay.nostr.info'
+          ]
+
+          // Set searching flag
+          this.setState({ searchingAllRelays: true })
+
+          // Show loading indicator
+          const loadingPopup = Swal.fire({
+            title: 'Searching for follows...',
+            html:
+              'Checking multiple popular relays for your contacts list...<br><br>' +
+              '<div id="relay-search-progress">Starting search...</div>',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => {
+              Swal.showLoading()
+            }
+          })
+
+          // Track results
+          let searchResults = {}
+          let completedRelays = 0
+          let foundFollows = false
+          let bestRelay = null
+          let bestFollowCount = 0
+
+          // Function to update progress in the popup
+          const updateProgress = (relay, status, details = '') => {
+            const progressDiv = document.getElementById('relay-search-progress')
+            if (progressDiv) {
+              const relayName = relay.replace('wss://', '')
+              let statusText = status
+              if (details) {
+                statusText += ` (${details})`
+              }
+
+              const existingContent = progressDiv.innerHTML.split('<br>')
+              const newContent = [
+                ...existingContent.slice(0, 5),
+                `${relayName}: ${statusText}`
+              ].join('<br>')
+              progressDiv.innerHTML = newContent
+              progressDiv.scrollTop = progressDiv.scrollHeight
+            }
+          }
+
+          // Function to check one relay
+          const checkRelay = relayUrl => {
+            return new Promise(resolve => {
+              try {
+                updateProgress(relayUrl, 'Connecting...')
+                const relayConn = window.NostrTools.relayInit(relayUrl)
+
+                // Set timeout for the entire operation
+                const timeout = setTimeout(() => {
+                  updateProgress(relayUrl, 'Timed out')
+                  try {
+                    relayConn.close()
+                  } catch (e) {}
+                  resolve({ relay: relayUrl, follows: [], error: 'Timeout' })
+                }, 7000)
+
+                relayConn.on('connect', () => {
+                  updateProgress(relayUrl, 'Connected, searching...')
+
+                  // Look for contacts list events
+                  const sub = relayConn.sub([
+                    {
+                      kinds: [3, 10002],
+                      authors: [this.state.user.pubkey],
+                      limit: 5
+                    }
+                  ])
+
+                  let follows = []
+                  let receivedEvents = []
+
+                  sub.on('event', event => {
+                    receivedEvents.push(event)
+
+                    // Extract follows from event
+                    if (event.kind === 3 || event.kind === 10002) {
+                      const eventFollows = event.tags
+                        .filter(tag => tag[0] === 'p' && tag.length > 1)
+                        .map(tag => tag[1])
+
+                      if (eventFollows.length > follows.length) {
+                        follows = eventFollows
+                      }
+                    }
+                  })
+
+                  sub.on('eose', () => {
+                    clearTimeout(timeout)
+                    try {
+                      relayConn.close()
+                    } catch (e) {}
+
+                    updateProgress(
+                      relayUrl,
+                      follows.length > 0
+                        ? `Found ${follows.length} follows!`
+                        : 'No follows found'
+                    )
+
+                    resolve({
+                      relay: relayUrl,
+                      follows,
+                      events: receivedEvents,
+                      error: null
+                    })
+                  })
+                })
+
+                relayConn.on('error', err => {
+                  clearTimeout(timeout)
+                  updateProgress(relayUrl, 'Failed', err.toString())
+                  try {
+                    relayConn.close()
+                  } catch (e) {}
+                  resolve({
+                    relay: relayUrl,
+                    follows: [],
+                    error: err.toString()
+                  })
+                })
+
+                relayConn.connect()
+              } catch (err) {
+                updateProgress(relayUrl, 'Failed', err.toString())
+                resolve({
+                  relay: relayUrl,
+                  follows: [],
+                  error: err.toString()
+                })
+              }
+            })
+          }
+
+          // Process relays sequentially (to avoid overwhelming the browser)
+          const processRelays = async () => {
+            for (const relay of relaysToCheck) {
+              if (relay === this.state.relay) {
+                searchResults[relay] = {
+                  follows: this.state.following,
+                  checked: true,
+                  error: null,
+                  isCurrent: true
+                }
+                completedRelays++
+                updateProgress(
+                  relay,
+                  this.state.following.length > 0
+                    ? `Current relay: ${this.state.following.length} follows`
+                    : 'Current relay: No follows'
+                )
+
+                if (this.state.following.length > bestFollowCount) {
+                  bestFollowCount = this.state.following.length
+                  bestRelay = relay
+                  foundFollows = true
+                }
+
+                continue
+              }
+
+              const result = await checkRelay(relay)
+              searchResults[relay] = {
+                follows: result.follows,
+                checked: true,
+                error: result.error,
+                events: result.events
+              }
+
+              completedRelays++
+
+              if (result.follows.length > bestFollowCount) {
+                bestFollowCount = result.follows.length
+                bestRelay = relay
+                foundFollows = true
+              }
+            }
+
+            // Close the loading popup
+            loadingPopup.close()
+
+            // If we found follows somewhere, offer to switch relays
+            if (foundFollows && bestRelay && bestRelay !== this.state.relay) {
+              Swal.fire({
+                title: 'Found Follows!',
+                html: `Found ${bestFollowCount} follows on ${bestRelay}<br><br>Would you like to switch to this relay?`,
+                icon: 'success',
+                showCancelButton: true,
+                confirmButtonText: 'Switch Relay',
+                cancelButtonText: 'Stay on Current Relay'
+              }).then(result => {
+                if (result.isConfirmed) {
+                  // Switch relay and update follows
+                  this.setState({ relay: bestRelay }, () => {
+                    this.connectToRelay()
+                    this.fetchFollowingList()
+                  })
+                }
+              })
+            } else if (foundFollows && bestRelay === this.state.relay) {
+              Swal.fire({
+                title: 'Search Complete',
+                html: `Your current relay has the most follows (${bestFollowCount}).`,
+                icon: 'success'
+              })
+            } else {
+              Swal.fire({
+                title: 'No Follows Found',
+                html:
+                  'Could not find a contacts list on any of the popular relays.<br><br>' +
+                  'You may need to create a contacts list using a Nostr client like Damus, Snort, or Primal.',
+                icon: 'info'
+              })
+            }
+
+            // Reset search flag
+            this.setState({ searchingAllRelays: false })
+          }
+
+          // Start the process
+          processRelays()
+        }
+
+        render() {
+          const {
+            events,
+            connected,
+            relay,
+            customRelay,
+            error,
+            autoScroll,
+            user,
+            newNoteContent,
+            following,
+            viewMode,
+            isRefreshingFollows,
+            searchingAllRelays
+          } = this.state
+
+          return html`
+            <${Header}
+              user=${user}
+              onLogin=${this.handleLogin}
+              onLogout=${this.handleLogout}
+            />
+            <${Sidebar} />
+            <div class="main-content">
+              <h1 class="section-title">Nostr App</h1>
+
+              <div class="controls-container">
+                <div class="controls-row">
+                  <div class="control-group">
+                    <label class="control-label">Select Relay</label>
+                    <select
+                      class="select-input"
+                      value=${relay}
+                      onChange=${this.handleRelayChange}
+                    >
+                      <option value="wss://relay.damus.io">
+                        Damus (wss://relay.damus.io)
+                      </option>
+
+                      <option value="wss://relay.primal.net">
+                        Primal (wss://relay.primal.net)
+                      </option>
+
+                      <option value="wss://relay.nostr.band">
+                        Nostr.band (wss://relay.nostr.band)
+                      </option>
+                      <option value="wss://nos.lol">
+                        nos.lol (wss://nos.lol)
+                      </option>
+                      <option value="wss://relay.snort.social">
+                        Snort (wss://relay.snort.social)
+                      </option>
+                      <option value="wss://ditto.pub/relay">
+                        Ditto (wss://ditto.pub/relay)
+                      </option>
+                    </select>
+                  </div>
+
+                  <div class="control-group">
+                    <label class="control-label">Custom Relay URL</label>
+                    <form
+                      class="custom-relay-form"
+                      onSubmit=${this.handleCustomRelaySubmit}
+                    >
+                      <input
+                        type="text"
+                        class="text-input"
+                        placeholder="wss://..."
+                        value=${customRelay}
+                        onChange=${this.handleCustomRelayChange}
+                      />
+                      <button type="submit" class="submit-button">
+                        Connect
+                      </button>
+                    </form>
+                  </div>
+                </div>
+
+                ${user &&
+                html`
+                  <div class="view-mode-container">
+                    <div
+                      style="display: flex; justify-content: space-between; align-items: center;"
+                    >
+                      <label class="control-label">Filter:</label>
+                      <div>
+                        <button
+                          class="debug-button"
+                          onClick=${this.refreshFollowList}
+                          disabled=${isRefreshingFollows}
+                          style=${isRefreshingFollows ? 'opacity: 0.7;' : ''}
+                        >
+                          ${isRefreshingFollows
+                            ? 'Refreshing...'
+                            : 'Refresh Follows'}
+                        </button>
+                        <button
+                          class="debug-button"
+                          onClick=${this.showDebugInfo}
+                          style="margin-left: 10px;"
+                        >
+                          Advanced Debug
+                        </button>
+                      </div>
+                    </div>
+                    <div class="view-mode-buttons">
+                      <button
+                        class=${`view-mode-button ${
+                          viewMode === 'all' ? 'active' : ''
+                        }`}
+                        onClick=${() => this.setViewMode('all')}
+                      >
+                        All Posts
+                      </button>
+                      <button
+                        class=${`view-mode-button ${
+                          viewMode === 'following' ? 'active' : ''
+                        }`}
+                        onClick=${() => this.setViewMode('following')}
+                      >
+                        Following (${following.length})
+                      </button>
+                      <button
+                        class=${`view-mode-button ${
+                          viewMode === 'mine' ? 'active' : ''
+                        }`}
+                        onClick=${() => this.setViewMode('mine')}
+                      >
+                        My Posts
+                      </button>
+                    </div>
+                    ${following.length > 0
+                      ? html`
+                          <button
+                            class="debug-button"
+                            onClick=${() => {
+                              Swal.fire({
+                                title: 'Your Follow List',
+                                html: `
+                                  <div style="max-height: 300px; overflow-y: auto; text-align: left;">
+                                    <p>You follow ${
+                                      following.length
+                                    } accounts:</p>
+                                    <ul style="font-family: monospace; font-size: 12px;">
+                                      ${following
+                                        .map(
+                                          pk =>
+                                            `<li>${pk.substring(
+                                              0,
+                                              8
+                                            )}...${pk.substring(
+                                              pk.length - 4
+                                            )}</li>`
+                                        )
+                                        .join('')}
+                                    </ul>
+                                  </div>
+                                `,
+                                showConfirmButton: true
+                              })
+                            }}
+                          >
+                            View Follow List Details
+                          </button>
+                        `
+                      : html`
+                          <div>
+                            <button
+                              class="debug-button"
+                              onClick=${() => {
+                                Swal.fire({
+                                  title: 'No Follows Found',
+                                  html: `
+                                    <div style="text-align: left;">
+                                      <p>No follows were found in your contacts list on this relay.</p>
+                                      <p>To create a contact list, you can:</p>
+                                      <ul>
+                                        <li>Use a Nostr client with contacts management</li>
+                                        <li>Follow people on other Nostr clients that publish to this relay</li>
+                                        <li><a href="#" onClick="document.querySelector('button[onClick*=showDebugInfo]').click(); return false;">Click here for advanced debugging</a></li>
+                                      </ul>
+                                    </div>
+                                  `,
+                                  showConfirmButton: true
+                                })
+                              }}
+                            >
+                              Why am I not seeing follows?
+                            </button>
+
+                            <button
+                              class="debug-button"
+                              style="margin-top: 10px; width: 100%;"
+                              onClick=${this.searchAllRelaysForFollows}
+                              disabled=${searchingAllRelays}
+                            >
+                              ${searchingAllRelays
+                                ? 'Searching relays...'
+                                : 'Search All Popular Relays for Follows'}
+                            </button>
+                          </div>
+                        `}
+                  </div>
+                `}
+
+                <div class="status-row">
+                  <div class="connection-status">
+                    <div
+                      class="status-indicator ${connected
+                        ? 'connected'
+                        : 'disconnected'}"
+                    ></div>
+                    <span>${connected ? 'Connected' : 'Disconnected'}</span>
+                    ${connected &&
+                    html`<span class="relay-url">to ${relay}</span>`}
+                  </div>
+
+                  <div
+                    class="auto-scroll-toggle"
+                    onClick=${this.toggleAutoScroll}
+                  >
+                    <div
+                      class="toggle-switch ${autoScroll ? 'active' : ''}"
+                    ></div>
+                    <span>Auto-scroll</span>
+                  </div>
+                </div>
+
+                ${error && html`<div class="error-message">${error}</div>`}
+              </div>
+
+              ${user &&
+              html`
+                <div class="controls-container note-form-container">
+                  <form onSubmit=${this.publishNote}>
+                    <div class="control-group" style="margin-bottom: 10px;">
+                      <label class="control-label">Create New Note</label>
+                      <textarea
+                        class="note-textarea"
+                        placeholder="What's on your mind?"
+                        value=${newNoteContent}
+                        onChange=${this.handleNoteContentChange}
+                      ></textarea>
+                    </div>
+                    <button
+                      type="submit"
+                      class="submit-button full-width-button"
+                      disabled=${!connected}
+                    >
+                      ${connected ? 'Publish Note' : 'Connect to a relay first'}
+                    </button>
+                  </form>
+                </div>
+              `}
+
+              <div
+                class="events-container"
+                ref=${el => (this.eventsContainer = el)}
+              >
+                ${events.length === 0 && !error
+                  ? html`<div class="events-placeholder">
+                      ${user
+                        ? viewMode === 'mine'
+                          ? `Waiting for your notes from ${relay}...`
+                          : viewMode === 'following'
+                          ? following.length > 0
+                            ? `Waiting for posts from people you follow (${following.length})...`
+                            : 'No follows found in your contacts list. Try creating a contact list on this relay.'
+                          : 'Waiting for events...'
+                        : 'Waiting for events...'}
+                    </div>`
+                  : html`<div class="events-list">
+                      ${user &&
+                      html`
+                        <div
+                          style="padding: 0 0 16px 0; color: var(--primary); font-weight: 500;"
+                        >
+                          ${viewMode === 'mine'
+                            ? 'Showing your notes only'
+                            : viewMode === 'following'
+                            ? `Showing posts from people you follow (${following.length})`
+                            : 'Showing all posts'}
+                        </div>
+                      `}
+                      ${events.map(
+                        (event, index) =>
+                          html`<div key=${index} class="event-card">
+                            <div class="event-header">
+                              <div>
+                                <span class="event-kind">
+                                  ${this.getEventKindName(event.kind)}
+                                </span>
+                                <span class="event-id">
+                                  ID: ${event.id.substring(0, 8)}...
+                                </span>
+                              </div>
+                              <span class="event-timestamp">
+                                ${this.formatTimestamp(event.created_at)}
+                              </span>
+                            </div>
+
+                            ${event.content &&
+                            html`<div class="event-content">
+                              ${this.formatContent(event)}
+                            </div>`}
+
+                            <div class="event-meta">
+                              <div>
+                                Pubkey: ${event.pubkey.substring(0, 16)}...
+                              </div>
+                              ${event.tags.length > 0 &&
+                              html`<div class="event-tags">
+                                Tags:
+                                <div>
+                                  <table class="tags-table">
+                                    <tbody>
+                                      ${event.tags.map(
+                                        tag => html`
+                                          <tr>
+                                            <td class="tag-name">${tag[0]}</td>
+                                            <td class="tag-value">
+                                              ${tag.slice(1).join(', ')}
+                                            </td>
+                                          </tr>
+                                        `
+                                      )}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>`}
+                            </div>
+
+                            <div class="event-actions">
+                              <button
+                                class="action-button log-action"
+                                onClick=${() =>
+                                  console.log('Full event:', event)}
+                              >
+                                Log full event to console
+                              </button>
+                              <button
+                                class="action-button copy-action"
+                                onClick=${() => {
+                                  navigator.clipboard.writeText(
+                                    JSON.stringify(event, null, 2)
+                                  )
+                                  alert('Event copied to clipboard')
+                                }}
+                              >
+                                Copy as JSON
+                              </button>
+                            </div>
+                          </div>`
+                      )}
+                    </div>`}
+              </div>
+
+              <div class="events-footer">
+                Showing ${Math.min(events.length, this.state.maxEvents)} events
+                (max: ${this.state.maxEvents})
+              </div>
+            </div>
+          `
+        }
+      }
+
+      render(html`<${NostrFirehose} />`, document.getElementById('app'))
+    </script>
+  </body>
+</html>

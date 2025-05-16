@@ -1,0 +1,1775 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Split Screen Markdown Editor</title>
+
+    <!-- CDN for nosdav-shim -->
+    <script src="https://cdn.jsdelivr.net/npm/nosdav-shim@latest/dist/nosdav-shim.min.js"></script>
+    <!-- Import SweetAlert for notifications -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Import secp256k1 for cryptographic operations -->
+    <script src="https://cdn.jsdelivr.net/npm/@noble/secp256k1@1.7.1/lib/index.browser.js"></script>
+    <!-- Import highlight.js for code syntax highlighting -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/highlight.js@11.7.0/styles/github.min.css"
+    />
+    <!-- Use the complete bundle with common languages included -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <!-- Import DOMPurify for sanitizing HTML -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.1/dist/purify.min.js"></script>
+    <!-- Import Mermaid for diagram rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+
+    <!-- Markmap dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markmap-view"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markmap-lib"></script>
+
+    <style>
+      body {
+        font-family: 'Arial', sans-serif;
+        background-color: #f0f0f0;
+        color: #333;
+        line-height: 1.6;
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden; /* Prevent horizontal scrolling on the body */
+      }
+
+      #app {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+      }
+
+      #editor,
+      #preview {
+        padding: 20px;
+        box-sizing: border-box;
+        background-color: #fff;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        margin: 1%;
+        overflow-x: hidden; /* Prevent horizontal scrolling in containers */
+      }
+
+      /* Dual view styles */
+      .dual-view #editor,
+      .dual-view #preview {
+        width: 48%;
+        flex: 0 0 48%; /* Use flexbox instead of float */
+      }
+
+      /* Single view styles */
+      .single-view #editor {
+        display: none;
+      }
+
+      .single-view #preview {
+        width: 98%;
+        margin: 1% auto;
+        display: block;
+      }
+
+      /* Hide the default preview when markmap is active */
+      .dual-view #preview.hidden,
+      .single-view #preview.hidden {
+        display: none;
+      }
+
+      /* Show markmap container when active */
+      #markmapContainer.active {
+        display: block;
+        width: 98%;
+        margin: 1% auto;
+      }
+
+      /* Textarea styles */
+      #markdownInput {
+        width: 100%;
+        height: calc(
+          100vh - 150px
+        ); /* Adjust height to account for other elements */
+        resize: none; /* Prevent manual resizing which can cause scrollbars */
+        box-sizing: border-box; /* Include padding in width calculation */
+        overflow-y: auto; /* Allow vertical scrolling */
+        overflow-x: hidden; /* Prevent horizontal scrolling */
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo,
+          monospace;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      #toggleViewButton,
+      #goButton {
+        background-color: #008cba;
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        margin: 5px;
+        flex: 0 0 auto;
+      }
+
+      #toggleViewButton:hover,
+      #goButton:hover {
+        background-color: #006f8a;
+      }
+
+      #toggleViewButton {
+        margin-left: 0;
+      }
+
+      #toggleMarkmapButton {
+        background-color: #4caf50;
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        margin: 5px;
+        flex: 0 0 auto;
+      }
+
+      #toggleMarkmapButton:hover {
+        background-color: #3e8e41;
+      }
+
+      #markmapContainer {
+        width: 100%;
+        height: calc(100vh - 150px);
+        display: none;
+      }
+
+      #markmapSvg {
+        width: 100%;
+        height: 100%;
+      }
+
+      #saveButton {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background-color: #008cba;
+        border: none;
+        color: white;
+        padding: 15px 32px;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+      #saveButton:hover {
+        background-color: #006f8a;
+      }
+      #saveButton::after {
+        content: 'Ctrl+S';
+        position: absolute;
+        top: -25px;
+        right: 0;
+        background-color: #333;
+        color: white;
+        padding: 5px;
+        border-radius: 3px;
+        font-size: 12px;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      #saveButton:hover::after {
+        opacity: 1;
+      }
+      #currentUri {
+        margin: 20px 0;
+        padding: 0 20px;
+        font-size: 18px;
+        width: 100%;
+        box-sizing: border-box;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      #currentUri input {
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        width: 60%; /* Adjust the width as per your requirement */
+        font-size: 18px;
+        margin-right: 10px;
+        box-sizing: border-box;
+        flex: 1 1 auto;
+        min-width: 200px;
+      }
+
+      #currentUri input:focus {
+        border-color: #008cba;
+      }
+
+      /* Optional: Style for tooltip */
+      #openNewTab {
+        position: relative;
+        cursor: pointer;
+      }
+
+      #openNewTab:hover::after {
+        content: 'Open in new tab';
+        position: absolute;
+        left: 0;
+        top: 25px;
+        background-color: #333;
+        color: white;
+        padding: 5px;
+        border-radius: 3px;
+        font-size: 14px;
+      }
+
+      /* Clear fix for floating elements */
+      .clearfix::after {
+        content: '';
+        clear: both;
+        display: table;
+      }
+
+      /* Login button styles */
+      #loginButton {
+        background-color: #008cba;
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        margin-left: 20px;
+      }
+
+      #loginButton:hover {
+        background-color: #006f8a;
+      }
+
+      /* Status indicator */
+      #loginStatus {
+        display: inline-block;
+        margin-left: 20px;
+        font-size: 14px;
+      }
+
+      /* Enhanced markdown styling */
+      #preview {
+        overflow-x: auto;
+        height: calc(100vh - 150px); /* Match the height of the textarea */
+        overflow-y: auto; /* Allow vertical scrolling */
+      }
+
+      #preview h1,
+      #preview h2,
+      #preview h3,
+      #preview h4,
+      #preview h5,
+      #preview h6 {
+        margin-top: 1.5em;
+        margin-bottom: 0.5em;
+        font-weight: 600;
+        line-height: 1.25;
+        border-bottom: 1px solid #eaecef;
+        padding-bottom: 0.3em;
+      }
+
+      #preview h1 {
+        font-size: 2em;
+      }
+
+      #preview h2 {
+        font-size: 1.5em;
+      }
+
+      #preview h3 {
+        font-size: 1.25em;
+      }
+
+      #preview blockquote {
+        padding: 0 1em;
+        color: #6a737d;
+        border-left: 0.25em solid #dfe2e5;
+        margin: 0 0 16px 0;
+      }
+
+      #preview pre {
+        background-color: #f6f8fa;
+        border-radius: 3px;
+        padding: 16px;
+        overflow: auto;
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo,
+          monospace;
+        font-size: 85%;
+        line-height: 1.45;
+      }
+
+      #preview code {
+        background-color: rgba(27, 31, 35, 0.05);
+        border-radius: 3px;
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo,
+          monospace;
+        font-size: 85%;
+        padding: 0.2em 0.4em;
+      }
+
+      #preview pre code {
+        background-color: transparent;
+        padding: 0;
+      }
+
+      #preview table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 0 0 16px 0;
+        display: block;
+        overflow-x: auto;
+      }
+
+      #preview table th,
+      #preview table td {
+        padding: 6px 13px;
+        border: 1px solid #dfe2e5;
+      }
+
+      #preview table tr {
+        background-color: #fff;
+        border-top: 1px solid #c6cbd1;
+      }
+
+      #preview table tr:nth-child(2n) {
+        background-color: #f6f8fa;
+      }
+
+      #preview table th {
+        background-color: #f6f8fa;
+        font-weight: 600;
+      }
+
+      #preview img {
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+
+      #preview hr {
+        height: 0.25em;
+        padding: 0;
+        margin: 24px 0;
+        background-color: #e1e4e8;
+        border: 0;
+      }
+
+      #preview ul,
+      #preview ol {
+        padding-left: 2em;
+        margin-bottom: 16px;
+      }
+
+      #preview .task-list-item {
+        list-style-type: none;
+      }
+
+      #preview .task-list-item-checkbox {
+        margin: 0 0.2em 0.25em -1.6em;
+        vertical-align: middle;
+      }
+
+      /* Footnotes styling */
+      #preview .footnote-ref {
+        font-size: 0.8em;
+        vertical-align: super;
+        line-height: 0;
+      }
+
+      #preview .footnotes {
+        border-top: 1px solid #e1e4e8;
+        margin-top: 2em;
+        padding-top: 1em;
+      }
+
+      #preview .footnotes ol {
+        padding-left: 1em;
+      }
+
+      #preview .footnotes li {
+        font-size: 0.9em;
+        color: #6a737d;
+      }
+
+      /* Image upload indicator */
+      .image-upload-indicator {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        z-index: 1000;
+        display: none;
+      }
+
+      /* Drag and drop styles */
+      .drag-highlight {
+        border: 2px dashed #008cba !important;
+        background-color: rgba(0, 140, 186, 0.1) !important;
+      }
+
+      #dropMessage {
+        display: none;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        z-index: 100;
+      }
+
+      /* Container for editor and preview */
+      .dual-view {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0 1%;
+      }
+
+      .single-view {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0 1%;
+      }
+
+      #preview pre.mermaid {
+        background-color: transparent;
+        padding: 0;
+      }
+
+      .mermaid {
+        text-align: center;
+      }
+
+      .mermaid svg {
+        max-width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div class="image-upload-indicator" id="imageUploadIndicator">
+      Uploading image...
+    </div>
+    <div id="dropMessage">Drop image to upload</div>
+
+    <script type="module">
+      // Import from CDN instead of local files
+      import {
+        html,
+        render,
+        Component
+      } from 'https://cdn.jsdelivr.net/npm/htm@3.1.1/preact/standalone.module.js'
+      import { marked } from 'https://cdn.jsdelivr.net/npm/marked@4.3.0/lib/marked.esm.js'
+      import * as secp256k1 from 'https://cdn.jsdelivr.net/npm/@noble/secp256k1@1.7.1/+esm'
+
+      // Import navbar
+      import Navbar from './navbar.js'
+      import './nosdav-shim.js'
+
+      window.secp256k1 = secp256k1
+
+      // Function to safely initialize highlight.js
+      function initializeHighlightJs() {
+        if (window.hljs) {
+          console.log('highlight.js is available')
+          try {
+            // Force auto-highlighting for all code blocks
+            window.hljs.configure({
+              ignoreUnescapedHTML: true,
+              throwUnescapedHTML: false
+            })
+
+            // Log available languages
+            if (window.hljs.listLanguages) {
+              console.log(
+                'Available languages:',
+                window.hljs.listLanguages().join(', ')
+              )
+            }
+          } catch (e) {
+            console.error('Error initializing highlight.js:', e)
+          }
+        } else {
+          console.warn('highlight.js is not available during initial setup')
+        }
+      }
+
+      // Initialize highlight.js if available
+      initializeHighlightJs()
+
+      // Configure marked with options
+      marked.setOptions({
+        gfm: true, // GitHub Flavored Markdown
+        breaks: true, // Convert line breaks to <br>
+        pedantic: false,
+        smartLists: true,
+        smartypants: true, // Use "smart" typographic punctuation
+        highlight: function (code, lang) {
+          // Skip highlighting for Mermaid blocks
+          if (lang === 'mermaid') {
+            return code
+          }
+
+          // Use highlight.js for syntax highlighting
+          if (code && lang && window.hljs) {
+            try {
+              if (window.hljs.getLanguage(lang)) {
+                console.log(`Highlighting code block with language: ${lang}`)
+                return window.hljs.highlight(code, { language: lang }).value
+              } else {
+                console.log(`Language ${lang} not found, using auto-detection`)
+                return window.hljs.highlightAuto(code).value
+              }
+            } catch (err) {
+              console.error('Highlight.js error:', err)
+            }
+          }
+          return code || '' // Return the code without highlighting if there's an issue and ensure it's not undefined
+        }
+      })
+
+      // Add support for task lists
+      const renderer = new marked.Renderer()
+
+      // Override the code block renderer to ensure language classes are properly added
+      renderer.code = function (code, language) {
+        // Ensure code is not undefined
+        code = code || ''
+
+        // Special handling for Mermaid diagrams
+        if (language === 'mermaid') {
+          return `<div class="mermaid">${code}</div>`
+        }
+
+        // Check if hljs is available
+        if (!window.hljs) {
+          console.warn('highlight.js not available during code rendering')
+          return `<pre><code${
+            language ? ` class="language-${language}"` : ''
+          }>${code}</code></pre>`
+        }
+
+        // Safely check if the language is supported
+        let validLanguage = ''
+        try {
+          validLanguage =
+            language && window.hljs.getLanguage(language) ? language : ''
+        } catch (e) {
+          console.warn('Error checking language:', e)
+        }
+
+        const languageClass = language ? ` class="language-${language}"` : ''
+
+        // Try to highlight if possible, otherwise return plain code
+        try {
+          return `<pre><code${languageClass}>${
+            validLanguage && window.hljs
+              ? window.hljs.highlight(code, { language: validLanguage }).value
+              : code
+          }</code></pre>`
+        } catch (e) {
+          console.warn('Error during code highlighting in renderer:', e)
+          return `<pre><code${languageClass}>${code}</code></pre>`
+        }
+      }
+
+      // Override the list item renderer to support task lists
+      const originalListItem = renderer.listitem
+      renderer.listitem = function (text) {
+        // Check if this is a task list item
+        const taskRegex = /^\s*\[(x| )\]\s*/i
+        const matches = text.match(taskRegex)
+
+        if (matches) {
+          const checked = matches[1].toLowerCase() === 'x'
+          const newText = text.replace(taskRegex, '')
+          return `<li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" ${
+            checked ? 'checked' : ''
+          } disabled> ${newText}</li>`
+        }
+
+        // Use the original renderer for non-task list items
+        return originalListItem.call(this, text)
+      }
+
+      // Override the link renderer to open external links in a new tab
+      renderer.link = function (href, title, text) {
+        const isExternal =
+          href &&
+          href.startsWith('http') &&
+          !href.includes(window.location.hostname)
+        const target = isExternal
+          ? ' target="_blank" rel="noopener noreferrer"'
+          : ''
+        title = title ? ` title="${title}"` : ''
+        return `<a href="${href}"${title}${target}>${text}</a>`
+      }
+
+      marked.use({ renderer })
+
+      class MarkdownEditor extends Component {
+        constructor() {
+          super()
+          const uri = new URLSearchParams(window.location.search).get('uri')
+          this.state = {
+            uri,
+            markdownInput: '',
+            markdownOutput: '',
+            isDualView: false,
+            isLoggedIn: localStorage.getItem('loggedIn') === 'true',
+            pubkey: localStorage.getItem('pubkey') || null,
+            isUploadingImage: false,
+            isDraggingOver: false,
+            isMarkmapView: false
+          }
+
+          // Bind methods
+          this.applyHighlighting = this.applyHighlighting.bind(this)
+          this.handlePaste = this.handlePaste.bind(this)
+          this.handleDragOver = this.handleDragOver.bind(this)
+          this.handleDragEnter = this.handleDragEnter.bind(this)
+          this.handleDragLeave = this.handleDragLeave.bind(this)
+          this.handleDrop = this.handleDrop.bind(this)
+          this.handleKeyDown = this.handleKeyDown.bind(this)
+          this.toggleMarkmap = this.toggleMarkmap.bind(this)
+        }
+
+        // Add a dedicated method for applying syntax highlighting
+        applyHighlighting() {
+          // Wait a short time to ensure the DOM has been updated
+          setTimeout(() => {
+            if (!window.hljs) {
+              console.warn(
+                'highlight.js not available during applyHighlighting'
+              )
+              // Try to reload highlight.js if it's not available
+              this.loadHighlightJs()
+              return
+            }
+
+            try {
+              const codeBlocks = document.querySelectorAll('#preview pre code')
+              if (codeBlocks && codeBlocks.length > 0) {
+                console.log(
+                  'Applying highlighting to',
+                  codeBlocks.length,
+                  'code blocks'
+                )
+                codeBlocks.forEach(block => {
+                  try {
+                    // Use highlightBlock which is more reliable
+                    window.hljs.highlightBlock(block)
+                  } catch (e) {
+                    console.error('Error with highlightBlock:', e)
+                    try {
+                      window.hljs.highlightElement(block)
+                    } catch (e2) {
+                      console.error('Both highlighting methods failed:', e2)
+                    }
+                  }
+                })
+              } else {
+                console.log('No code blocks found to highlight')
+              }
+            } catch (error) {
+              console.error('Error in applyHighlighting:', error)
+            }
+
+            // Process Mermaid diagrams after highlighting
+            this.processMermaid()
+          }, 100)
+        }
+
+        // Process Mermaid diagrams
+        processMermaid() {
+          if (!window.mermaid) {
+            console.warn(
+              'Mermaid library not available for processing diagrams'
+            )
+            return
+          }
+
+          try {
+            window.mermaid.run({
+              querySelector: '.mermaid'
+            })
+            console.log('Mermaid diagrams processed')
+          } catch (error) {
+            console.error('Error processing Mermaid diagrams:', error)
+          }
+        }
+
+        // Method to load highlight.js if it's not available
+        loadHighlightJs() {
+          if (window.hljs) return
+
+          console.log('Attempting to load highlight.js')
+          const script = document.createElement('script')
+          script.src =
+            'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js'
+          script.onload = () => {
+            console.log('highlight.js loaded successfully')
+            if (window.hljs) {
+              window.hljs.configure({
+                ignoreUnescapedHTML: true,
+                throwUnescapedHTML: false
+              })
+              // Apply highlighting after loading
+              this.applyHighlighting()
+            }
+          }
+          script.onerror = e => {
+            console.error('Failed to load highlight.js:', e)
+          }
+          document.head.appendChild(script)
+        }
+
+        componentDidMount() {
+          // Ensure highlight.js is loaded
+          if (!window.hljs) {
+            this.loadHighlightJs()
+          }
+
+          // Initialize Mermaid.js
+          if (window.mermaid) {
+            try {
+              window.mermaid.initialize({
+                startOnLoad: false,
+                theme: 'default',
+                securityLevel: 'loose'
+              })
+              console.log('Mermaid initialized successfully')
+            } catch (e) {
+              console.error('Error initializing Mermaid:', e)
+            }
+          } else {
+            console.warn('Mermaid library not available')
+          }
+
+          if (this.state.uri) {
+            this.fetchMarkdown(this.state.uri)
+          } else {
+            // Set a default markdown example if no URI is provided
+            const defaultMarkdown = `# Welcome to the Markdown Editor
+
+This is a **powerful** markdown editor with support for many features:
+
+## Basic Formatting
+
+*Italic* and **bold** text
+~~Strikethrough~~ text
+
+## Lists
+
+### Unordered Lists
+- Item 1
+- Item 2
+  - Nested item
+
+### Ordered Lists
+1. First item
+2. Second item
+   1. Nested item
+
+### Task Lists
+- [x] Completed task
+- [ ] Incomplete task
+
+## Code Blocks
+
+Inline \`code\` looks like this.
+
+\`\`\`javascript
+// Code block with syntax highlighting
+function hello() {
+  console.log('Hello, world!');
+}
+\`\`\`
+
+## Mermaid Diagrams
+
+You can create diagrams using Mermaid syntax:
+
+\`\`\`mermaid
+graph TD
+    A[Start] --> B{Is it working?}
+    B -->|Yes| C[Great!]
+    B -->|No| D[Debug]
+    D --> B
+\`\`\`
+
+\`\`\`mermaid
+sequenceDiagram
+    participant User
+    participant System
+    User->>System: Perform action
+    System->>System: Process action
+    System-->>User: Return result
+\`\`\`
+
+## Tables
+
+| Header 1 | Header 2 | Header 3 |
+|----------|:--------:|---------:|
+| Left     | Center   | Right    |
+| Cell     | Cell     | Cell     |
+
+## Blockquotes
+
+> This is a blockquote.
+> It can span multiple lines.
+
+## Links and Images
+
+[Link to Google](https://www.google.com)
+
+![Image Alt Text](https://avatars.githubusercontent.com/u/131810998?s=96&v=4)
+
+## Paste Images
+
+You can paste images directly from your clipboard into the editor!
+You can also drag and drop images from your file system.
+
+## Footnotes
+
+Here's a sentence with a footnote.[^1]
+
+[^1]: This is the footnote content.
+
+Try editing this content to see the live preview!
+`
+            this.setState(
+              {
+                markdownInput: defaultMarkdown,
+                markdownOutput: this.renderMarkdown(defaultMarkdown)
+              },
+              this.applyHighlighting
+            )
+          }
+
+          // Check if user is already logged in
+          this.checkLoginStatus()
+
+          // Check for private key in URL hash
+          const hash = window.location.hash.substring(1)
+          if (hash && hash.length === 64 && /^[0-9a-fA-F]+$/.test(hash)) {
+            this.loginWithPrivkey(hash)
+            window.history.replaceState(
+              null,
+              null,
+              window.location.pathname + window.location.search
+            )
+          }
+
+          // Add paste event listener to the textarea
+          const textarea = document.getElementById('markdownInput')
+          if (textarea) {
+            textarea.addEventListener('paste', this.handlePaste)
+
+            // Add drag and drop event listeners
+            textarea.addEventListener('dragover', this.handleDragOver)
+            textarea.addEventListener('dragenter', this.handleDragEnter)
+            textarea.addEventListener('dragleave', this.handleDragLeave)
+            textarea.addEventListener('drop', this.handleDrop)
+          }
+
+          // Add keyboard shortcut for saving (Ctrl+S)
+          document.addEventListener('keydown', this.handleKeyDown)
+        }
+
+        componentWillUnmount() {
+          // Remove event listeners when component unmounts
+          document.removeEventListener('keydown', this.handleKeyDown)
+
+          const textarea = document.getElementById('markdownInput')
+          if (textarea) {
+            textarea.removeEventListener('paste', this.handlePaste)
+            textarea.removeEventListener('dragover', this.handleDragOver)
+            textarea.removeEventListener('dragenter', this.handleDragEnter)
+            textarea.removeEventListener('dragleave', this.handleDragLeave)
+            textarea.removeEventListener('drop', this.handleDrop)
+          }
+        }
+
+        // Handle keyboard shortcuts
+        handleKeyDown(e) {
+          // Ctrl+S to save
+          if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault() // Prevent browser's save dialog
+            this.saveMarkdown()
+          }
+
+          // Escape key to exit markmap mode
+          if (e.key === 'Escape' && this.state.isMarkmapView) {
+            e.preventDefault()
+            this.setState({ isMarkmapView: false })
+          }
+        }
+
+        checkLoginStatus() {
+          const isLoggedIn = localStorage.getItem('loggedIn') === 'true'
+          const pubkey = localStorage.getItem('pubkey')
+
+          if (isLoggedIn && pubkey) {
+            this.setState({ isLoggedIn, pubkey })
+          }
+        }
+
+        handleLogin = async () => {
+          const { value: loginMethod } = await Swal.fire({
+            title: 'Login',
+            html: `
+              <button id="extensionLogin" class="swal2-confirm swal2-styled" style="display:block; width:100%; margin:10px auto;">Sign in with Nostr extension</button>
+              <input id="privkeyInput" type="text" placeholder="Or enter your 64-character hex private key" class="swal2-input" style="display:block; width:100%; margin:10px auto;">
+              <p style="margin-top: 10px; font-size: 0.9em;"><a href="https://nostrapps.github.io/extensions/" target="_blank">What is a Nostr extension?</a></p>
+            `,
+            showConfirmButton: false,
+            showCloseButton: true,
+            focusConfirm: false,
+            didOpen: () => {
+              const extensionButton =
+                Swal.getPopup().querySelector('#extensionLogin')
+              const privkeyInput =
+                Swal.getPopup().querySelector('#privkeyInput')
+
+              extensionButton.addEventListener('click', () => {
+                Swal.clickConfirm()
+              })
+
+              privkeyInput.addEventListener('keyup', e => {
+                if (e.key === 'Enter') {
+                  Swal.clickConfirm()
+                }
+              })
+
+              privkeyInput.addEventListener('paste', e => {
+                setTimeout(() => {
+                  if (
+                    privkeyInput.value.length === 64 &&
+                    /^[0-9a-fA-F]+$/.test(privkeyInput.value)
+                  ) {
+                    Swal.clickConfirm()
+                  }
+                }, 0)
+              })
+            },
+            preConfirm: () => {
+              const privkey =
+                Swal.getPopup().querySelector('#privkeyInput').value
+              if (
+                privkey &&
+                (privkey.length !== 64 || !/^[0-9a-fA-F]+$/.test(privkey))
+              ) {
+                Swal.showValidationMessage(
+                  'Invalid private key format. Please enter a 64-character hex string.'
+                )
+                return false
+              }
+              return {
+                loginMethod: privkey ? 'privkey' : 'extension',
+                privkey
+              }
+            }
+          })
+
+          if (loginMethod) {
+            if (loginMethod.loginMethod === 'privkey') {
+              this.loginWithPrivkey(loginMethod.privkey)
+            } else {
+              const storedPrivkey = localStorage.getItem('nostr:privkey')
+              if (storedPrivkey) {
+                this.loginWithPrivkey(storedPrivkey)
+              } else {
+                this.loginWithExtension()
+              }
+            }
+          }
+        }
+
+        loginWithExtension = async () => {
+          if (window.nostr) {
+            try {
+              const pubkey = await window.nostr.getPublicKey()
+              this.setState({ isLoggedIn: true, pubkey }, () => {
+                localStorage.setItem('loggedIn', 'true')
+                localStorage.setItem('pubkey', pubkey)
+                Swal.fire({
+                  title: 'Logged in!',
+                  text: 'You have successfully logged in with your Nostr extension.',
+                  icon: 'success',
+                  timer: 1000,
+                  showConfirmButton: false
+                })
+              })
+            } catch (error) {
+              console.error('Login failed:', error)
+              Swal.fire({
+                title: 'Login Failed',
+                text: 'There was an error logging in with your Nostr extension.',
+                icon: 'error',
+                timer: 1000,
+                showConfirmButton: false
+              })
+            }
+          } else {
+            Swal.fire({
+              title: 'Extension Not Found',
+              text: 'Nostr extension not found. Please install a Nostr browser extension.',
+              icon: 'warning',
+              timer: 1000,
+              showConfirmButton: false
+            })
+          }
+        }
+
+        loginWithPrivkey = async privkey => {
+          if (privkey) {
+            try {
+              const pubkey = secp256k1.utils.bytesToHex(
+                secp256k1.schnorr.getPublicKey(privkey)
+              )
+              this.setState({ isLoggedIn: true, pubkey }, () => {
+                localStorage.setItem('loggedIn', 'true')
+                localStorage.setItem('pubkey', pubkey)
+                localStorage.setItem('nostr:privkey', privkey)
+                Swal.fire({
+                  title: 'Logged in!',
+                  text: 'You have successfully logged in with your private key.',
+                  icon: 'success',
+                  timer: 1000,
+                  showConfirmButton: false
+                })
+              })
+            } catch (error) {
+              console.error('Login failed:', error)
+              Swal.fire({
+                title: 'Login Failed',
+                text: 'There was an error generating the public key from the provided private key.',
+                icon: 'error',
+                timer: 1000,
+                showConfirmButton: false
+              })
+            }
+          }
+        }
+
+        handleLogout = () => {
+          this.setState({ isLoggedIn: false, pubkey: null })
+          localStorage.setItem('loggedIn', 'false')
+          localStorage.removeItem('pubkey')
+          localStorage.removeItem('nostr:privkey')
+
+          Swal.fire({
+            title: 'Logged out!',
+            text: 'You have successfully logged out.',
+            icon: 'success',
+            timer: 1000,
+            showConfirmButton: false
+          })
+        }
+
+        fetchMarkdown = async uri => {
+          try {
+            // Ensure highlight.js is loaded before fetching
+            if (!window.hljs) {
+              this.loadHighlightJs()
+            }
+
+            const response = await fetch(uri)
+            if (!response.ok) {
+              throw new Error(
+                `Failed to fetch: ${response.status} ${response.statusText}`
+              )
+            }
+            const markdownInput = await response.text()
+            this.setState(
+              {
+                uri,
+                markdownInput,
+                markdownOutput: this.renderMarkdown(markdownInput)
+              },
+              () => {
+                this.applyHighlighting()
+                // If markmap view is active, update it
+                if (this.state.isMarkmapView) {
+                  this.renderMarkmap()
+                }
+              }
+            )
+          } catch (error) {
+            console.error('Error fetching markdown:', error)
+            // Instead of showing an error, initialize with empty text and show dual view
+            this.setState(
+              {
+                uri,
+                markdownInput: '',
+                markdownOutput: this.renderMarkdown(''),
+                isDualView: true, // Switch to dual view when there's an error like 404
+                isMarkmapView: false // Ensure markmap view is disabled
+              },
+              () => {
+                this.applyHighlighting()
+                if (this.state.isMarkmapView) {
+                  this.renderMarkmap()
+                }
+                // Focus on the editor textarea for immediate typing
+                document.getElementById('markdownInput')?.focus()
+              }
+            )
+          }
+        }
+
+        saveMarkdown = async () => {
+          if (!this.state.isLoggedIn) {
+            Swal.fire({
+              title: 'Login Required',
+              text: 'You need to login with Nostr to save documents.',
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonText: 'Login Now',
+              cancelButtonText: 'Cancel'
+            }).then(result => {
+              if (result.isConfirmed) {
+                this.handleLogin()
+              }
+            })
+            return
+          }
+
+          if (!this.state.uri) {
+            // If no URI is set, prompt the user to enter one
+            const { value: newUri } = await Swal.fire({
+              title: 'Save Document',
+              input: 'text',
+              inputLabel: 'Enter a URI to save the document',
+              inputPlaceholder: 'https://nosdav.net/your-pubkey/document.md',
+              showCancelButton: true,
+              inputValidator: value => {
+                if (!value) {
+                  return 'You need to enter a URI!'
+                }
+                if (!value.startsWith('https://')) {
+                  return 'URI must start with https://'
+                }
+              }
+            })
+
+            if (newUri) {
+              this.setState({ uri: newUri })
+              await this.performSave(newUri)
+            }
+          } else {
+            await this.performSave(this.state.uri)
+          }
+        }
+
+        performSave = async uri => {
+          try {
+            Swal.fire({
+              title: 'Saving...',
+              text: 'Please wait while we save your document.',
+              allowOutsideClick: false,
+              didOpen: () => {
+                Swal.showLoading()
+              }
+            })
+
+            const response = await fetch(uri, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'text/markdown'
+              },
+              body: this.state.markdownInput
+            })
+
+            if (!response.ok) {
+              throw new Error(
+                `Failed to save: ${response.status} ${response.statusText}`
+              )
+            }
+
+            Swal.fire({
+              title: 'Saved!',
+              text: 'Your document has been saved successfully.',
+              icon: 'success',
+              timer: 2000,
+              showConfirmButton: false
+            })
+
+            // Update URL with the new URI if it's not already there
+            const currentUrl = new URL(window.location.href)
+            if (currentUrl.searchParams.get('uri') !== uri) {
+              currentUrl.searchParams.set('uri', uri)
+              history.pushState(null, '', currentUrl.toString())
+            }
+          } catch (error) {
+            console.error('Error saving markdown:', error)
+            Swal.fire({
+              title: 'Error',
+              text: `Failed to save document: ${error.message}`,
+              icon: 'error'
+            })
+          }
+        }
+
+        renderMarkdown(text) {
+          try {
+            // Process the markdown and sanitize the output
+            const rawHtml = marked.parse(text || '')
+            const sanitizedHtml = DOMPurify.sanitize(rawHtml, {
+              ADD_ATTR: ['target', 'rel', 'checked', 'disabled'],
+              ADD_TAGS: ['iframe']
+            })
+
+            // Return the HTML immediately
+            return sanitizedHtml
+          } catch (error) {
+            console.error('Error rendering markdown:', error)
+            // Provide a more graceful fallback
+            return `<p>Error rendering markdown. Please try again.</p>
+                   <pre>${text || ''}</pre>`
+          }
+        }
+
+        updateOutput = () => {
+          this.setState(
+            {
+              markdownOutput: this.renderMarkdown(this.state.markdownInput)
+            },
+            this.applyHighlighting
+          )
+        }
+
+        onInputChange = e => {
+          this.setState(
+            {
+              markdownInput: e.target.value
+            },
+            () => {
+              this.updateOutput()
+              // If markmap view is active, update it as well
+              if (this.state.isMarkmapView) {
+                this.renderMarkmap()
+              }
+            }
+          )
+        }
+
+        handlePreviewClick = e => {
+          const target = e.target
+          if (target.tagName.toLowerCase() === 'a') {
+            const href = target.getAttribute('href')
+            if (href && href.endsWith('.md')) {
+              e.preventDefault()
+              const newUrl = new URL(window.location.href)
+              const currentUri = new URL(
+                newUrl.searchParams.get('uri'),
+                window.location.origin
+              )
+              const newUri = new URL(href, currentUri).toString()
+              newUrl.searchParams.set('uri', newUri)
+              history.pushState(null, '', newUrl.toString())
+              this.setState({ uri: newUri }, () => this.fetchMarkdown(newUri))
+            }
+          }
+        }
+
+        toggleView = () => {
+          this.setState({
+            isDualView: !this.state.isDualView,
+            // If markmap view is active, deactivate it
+            isMarkmapView: false
+          })
+        }
+
+        toggleMarkmap = () => {
+          this.setState(
+            {
+              isMarkmapView: !this.state.isMarkmapView
+            },
+            () => {
+              if (this.state.isMarkmapView) {
+                // Set a small timeout to ensure the container is visible
+                setTimeout(() => {
+                  this.renderMarkmap()
+                }, 50)
+              }
+            }
+          )
+        }
+
+        renderMarkmap = () => {
+          try {
+            // Get the markdown content
+            const markdown = this.state.markdownInput
+
+            // First clear the SVG
+            const svgEl = document.getElementById('markmapSvg')
+            if (svgEl) {
+              svgEl.innerHTML = ''
+
+              // Check if markmap libraries are available
+              if (
+                window.markmap &&
+                window.markmap.Transformer &&
+                window.markmap.Markmap
+              ) {
+                // Create the transformer
+                const transformer = new window.markmap.Transformer()
+
+                // Transform the markdown
+                const { root, features } = transformer.transform(markdown)
+
+                // Create the markmap
+                const mm = window.markmap.Markmap.create(
+                  '#markmapSvg',
+                  null,
+                  root
+                )
+
+                console.log('Markmap rendered successfully')
+              } else {
+                console.error('Markmap libraries not found')
+                Swal.fire({
+                  title: 'Error',
+                  text: 'Could not load markmap libraries. Please refresh and try again.',
+                  icon: 'error',
+                  timer: 3000
+                })
+              }
+            }
+          } catch (error) {
+            console.error('Error rendering markmap:', error)
+            Swal.fire({
+              title: 'Error',
+              text: `Failed to render markmap: ${error.message}`,
+              icon: 'error'
+            })
+          }
+        }
+
+        // Handle paste events
+        handlePaste(e) {
+          // Check if we're logged in
+          if (!this.state.isLoggedIn) {
+            Swal.fire({
+              title: 'Login Required',
+              text: 'You need to login with Nostr to upload images.',
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonText: 'Login Now',
+              cancelButtonText: 'Cancel'
+            }).then(result => {
+              if (result.isConfirmed) {
+                this.handleLogin()
+              }
+            })
+            return
+          }
+
+          // Check if the clipboard has images
+          const items = e.clipboardData.items
+          if (!items) return
+
+          let imageFile = null
+
+          // Find the first image in the clipboard
+          for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+              imageFile = items[i].getAsFile()
+              break
+            }
+          }
+
+          if (!imageFile) return // No image found
+
+          // Prevent the default paste behavior for images
+          e.preventDefault()
+
+          // Upload the image
+          this.uploadImage(imageFile)
+        }
+
+        // Upload an image file
+        uploadImage(file) {
+          // Show upload indicator
+          this.setState({ isUploadingImage: true })
+          document.getElementById('imageUploadIndicator').style.display =
+            'block'
+
+          // Generate a unique filename
+          const timestamp = Date.now()
+          const fileExtension = file.name
+            ? file.name.split('.').pop() || 'png'
+            : 'png'
+          const filename = `image_${timestamp}.${fileExtension}`
+
+          // Create a FileReader to read the image
+          const reader = new FileReader()
+          reader.onload = async event => {
+            try {
+              // Get the image data
+              const imageData = event.target.result
+
+              // Get the pubkey for the upload path
+              const pubkey = this.state.pubkey
+              if (!pubkey) {
+                throw new Error('No public key available')
+              }
+
+              // Create the upload URL
+              const uploadUrl = `https://nosdav.net/${pubkey}/images/${filename}`
+
+              // Upload the image
+              const response = await fetch(uploadUrl, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': file.type
+                },
+                body: file.type.includes('image/png')
+                  ? this.dataURItoBlob(imageData)
+                  : file
+              })
+
+              if (!response.ok) {
+                throw new Error(
+                  `Failed to upload: ${response.status} ${response.statusText}`
+                )
+              }
+
+              // Insert the markdown image link at cursor position
+              const altText = file.name
+                ? file.name.split('.')[0]
+                : 'Pasted Image'
+              this.insertImageLinkAtCursor(uploadUrl, altText)
+
+              // Hide upload indicator
+              this.setState({ isUploadingImage: false })
+              document.getElementById('imageUploadIndicator').style.display =
+                'none'
+
+              // Show success message
+              Swal.fire({
+                title: 'Image Uploaded',
+                text: 'Image has been uploaded and linked in the document.',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+              })
+            } catch (error) {
+              console.error('Error uploading image:', error)
+
+              // Hide upload indicator
+              this.setState({ isUploadingImage: false })
+              document.getElementById('imageUploadIndicator').style.display =
+                'none'
+
+              // Show error message
+              Swal.fire({
+                title: 'Upload Failed',
+                text: `Failed to upload image: ${error.message}`,
+                icon: 'error'
+              })
+            }
+          }
+
+          // Read the image as data URL
+          reader.readAsDataURL(file)
+        }
+
+        // Convert data URI to Blob
+        dataURItoBlob(dataURI) {
+          const byteString = atob(dataURI.split(',')[1])
+          const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0]
+
+          const ab = new ArrayBuffer(byteString.length)
+          const ia = new Uint8Array(ab)
+
+          for (let i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i)
+          }
+
+          return new Blob([ab], { type: mimeString })
+        }
+
+        // Insert image link at cursor position
+        insertImageLinkAtCursor(imageUrl, altText) {
+          const textarea = document.getElementById('markdownInput')
+          if (!textarea) return
+
+          const startPos = textarea.selectionStart
+          const endPos = textarea.selectionEnd
+
+          const markdownLink = `![${altText}](${imageUrl})`
+          const newValue =
+            textarea.value.substring(0, startPos) +
+            markdownLink +
+            textarea.value.substring(endPos)
+
+          // Update the textarea value
+          this.setState(
+            {
+              markdownInput: newValue
+            },
+            this.updateOutput
+          )
+
+          // Set the cursor position after the inserted text
+          setTimeout(() => {
+            textarea.focus()
+            textarea.selectionStart = startPos + markdownLink.length
+            textarea.selectionEnd = startPos + markdownLink.length
+          }, 0)
+        }
+
+        // Drag and drop event handlers
+        handleDragOver(e) {
+          e.preventDefault()
+          e.stopPropagation()
+        }
+
+        handleDragEnter(e) {
+          e.preventDefault()
+          e.stopPropagation()
+
+          // Add highlight class to the textarea
+          e.target.classList.add('drag-highlight')
+
+          // Show drop message
+          const dropMessage = document.getElementById('dropMessage')
+          if (dropMessage) {
+            dropMessage.style.display = 'block'
+          }
+
+          this.setState({ isDraggingOver: true })
+        }
+
+        handleDragLeave(e) {
+          e.preventDefault()
+          e.stopPropagation()
+
+          // Remove highlight class from the textarea
+          e.target.classList.remove('drag-highlight')
+
+          // Hide drop message
+          const dropMessage = document.getElementById('dropMessage')
+          if (dropMessage) {
+            dropMessage.style.display = 'none'
+          }
+
+          this.setState({ isDraggingOver: false })
+        }
+
+        handleDrop(e) {
+          e.preventDefault()
+          e.stopPropagation()
+
+          // Remove highlight class from the textarea
+          e.target.classList.remove('drag-highlight')
+
+          // Hide drop message
+          const dropMessage = document.getElementById('dropMessage')
+          if (dropMessage) {
+            dropMessage.style.display = 'none'
+          }
+
+          this.setState({ isDraggingOver: false })
+
+          // Check if we're logged in
+          if (!this.state.isLoggedIn) {
+            Swal.fire({
+              title: 'Login Required',
+              text: 'You need to login with Nostr to upload images.',
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonText: 'Login Now',
+              cancelButtonText: 'Cancel'
+            }).then(result => {
+              if (result.isConfirmed) {
+                this.handleLogin()
+              }
+            })
+            return
+          }
+
+          // Get the dropped files
+          const files = e.dataTransfer.files
+          if (!files || files.length === 0) return
+
+          // Process each image file
+          for (let i = 0; i < files.length; i++) {
+            const file = files[i]
+
+            // Check if the file is an image
+            if (!file.type.startsWith('image/')) continue
+
+            // Upload the image
+            this.uploadImage(file)
+          }
+        }
+
+        render(props, state) {
+          const viewClass = state.isDualView ? 'dual-view' : 'single-view'
+          const toggleButtonText = state.isDualView
+            ? 'Show Preview Only'
+            : 'Show Editor & Preview'
+
+          const loginButtonText = state.isLoggedIn
+            ? `Logout (${state.pubkey ? state.pubkey.substring(0, 8) : ''})`
+            : 'Login with Nostr'
+
+          return html`
+            <${Navbar} />
+            <div id="currentUri">
+              <input
+                type="url"
+                value=${state.uri || ''}
+                onInput=${e => this.setState({ uri: e.target.value })}
+                placeholder="Enter the URI here"
+              />
+              <button
+                id="goButton"
+                onClick=${() => this.fetchMarkdown(state.uri)}
+              >
+                Go
+              </button>
+              <button id="toggleViewButton" onClick=${this.toggleView}>
+                ${toggleButtonText}
+              </button>
+              <button id="toggleMarkmapButton" onClick=${this.toggleMarkmap}>
+                ${state.isMarkmapView ? 'Show Markdown' : 'Show Mind Map'}
+              </button>
+            </div>
+            <div class=${`${viewClass} clearfix`}>
+              <div id="editor">
+                <textarea
+                  id="markdownInput"
+                  onInput=${this.onInputChange}
+                  value=${state.markdownInput}
+                  placeholder="Type or paste markdown here. You can also paste images directly!"
+                ></textarea>
+              </div>
+              <div
+                id="preview"
+                onClick=${this.handlePreviewClick}
+                class=${state.isMarkmapView ? 'hidden' : ''}
+                dangerouslySetInnerHTML=${{ __html: state.markdownOutput }}
+              ></div>
+              <div
+                id="markmapContainer"
+                class=${state.isMarkmapView ? 'active' : ''}
+              >
+                <svg id="markmapSvg"></svg>
+              </div>
+            </div>
+            <button
+              id="saveButton"
+              onClick=${this.saveMarkdown}
+              title="Save document (Ctrl+S)"
+            >
+              Save
+            </button>
+          `
+        }
+      }
+
+      // Initialize highlight.js
+      document.addEventListener('DOMContentLoaded', () => {
+        console.log('DOM fully loaded')
+
+        // Try to initialize highlight.js again if it wasn't available earlier
+        if (!window.hljs) {
+          console.log(
+            'highlight.js not available at DOMContentLoaded, attempting to load it'
+          )
+          const script = document.createElement('script')
+          script.src =
+            'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js'
+          script.onload = () => {
+            console.log('highlight.js loaded successfully at DOMContentLoaded')
+            initializeHighlightJs()
+
+            // Apply highlighting to any existing code blocks
+            setTimeout(() => {
+              try {
+                const codeBlocks = document.querySelectorAll('pre code')
+                console.log(
+                  'Found',
+                  codeBlocks.length,
+                  'code blocks at startup'
+                )
+                if (codeBlocks && codeBlocks.length > 0) {
+                  codeBlocks.forEach(block => {
+                    try {
+                      window.hljs.highlightBlock(block)
+                    } catch (e) {
+                      console.error('Error with highlightBlock:', e)
+                      try {
+                        window.hljs.highlightElement(block)
+                      } catch (e2) {
+                        console.error('Both highlighting methods failed:', e2)
+                      }
+                    }
+                  })
+                }
+              } catch (error) {
+                console.error('Error applying highlighting at startup:', error)
+              }
+            }, 500)
+          }
+          document.head.appendChild(script)
+        } else {
+          console.log('highlight.js is available at DOMContentLoaded')
+          // Make sure highlighting is applied to any existing code blocks
+          setTimeout(() => {
+            try {
+              const codeBlocks = document.querySelectorAll('pre code')
+              console.log('Found', codeBlocks.length, 'code blocks at startup')
+              if (codeBlocks && codeBlocks.length > 0) {
+                codeBlocks.forEach(block => {
+                  try {
+                    // Try the older API first
+                    window.hljs.highlightBlock(block)
+                  } catch (e) {
+                    console.error('Error with highlightBlock:', e)
+                    // Fall back to the newer API
+                    try {
+                      window.hljs.highlightElement(block)
+                    } catch (e2) {
+                      console.error('Both highlighting methods failed:', e2)
+                    }
+                  }
+                })
+              }
+            } catch (error) {
+              console.error('Error applying highlighting at startup:', error)
+            }
+          }, 500)
+        }
+      })
+
+      render(html`<${MarkdownEditor} />`, document.getElementById('app'))
+    </script>
+  </body>
+</html>

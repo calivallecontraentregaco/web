@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Preact Pastebin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'light-blue': '#8ecae6',
+              blue: '#4a6fa5',
+              primary: '#4a6fa5',
+              'primary-dark': '#3a5683',
+              'primary-light': '#c5d5e5',
+              secondary: '#8fb8de',
+              accent: '#63c0f5',
+              purple: '#a78bfa',
+              'light-purple': '#c4b5fd'
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      :root {
+        --primary: #4a6fa5;
+        --primary-dark: #3a5683;
+        --primary-light: #c5d5e5;
+        --secondary: #8fb8de;
+        --accent: #63c0f5;
+        --text-light: #ffffff;
+        --text-dark: #334155;
+        --card-bg: #f0f7ff;
+        --body-bg: #f8fafc;
+        --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+        --radius-sm: 6px;
+        --radius-md: 12px;
+      }
+
+      .gradient-bg {
+        background: linear-gradient(
+          135deg,
+          var(--primary-light, #c5d5e5) 0%,
+          var(--primary, #4a6fa5) 100%
+        );
+      }
+      .paste-container {
+        transition: all 0.3s ease;
+      }
+      .paste-container:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+          0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      }
+      /* Remove old navbar styling */
+      /* nav {
+        background-color: #219ebc;
+        color: white;
+      }
+      nav a {
+        color: white;
+      } */
+    </style>
+  </head>
+  <body class="bg-body-bg min-h-screen">
+    <div id="app"></div>
+
+    <script type="module">
+      import {
+        h,
+        render,
+        Component
+      } from 'https://unpkg.com/preact@10.13.1/dist/preact.module.js'
+      import htm from 'https://unpkg.com/htm@3.1.1/dist/htm.module.js'
+
+      // Initialize htm with Preact
+      const html = htm.bind(h)
+
+      // Import navbar
+      import Navbar from './navbar.js'
+      import './nosdav-shim.js'
+      import * as secp256k1 from 'https://cdn.jsdelivr.net/npm/@noble/secp256k1@1.7.1/+esm'
+
+      window.secp256k1 = secp256k1
+
+      // Paste Component
+      class Paste extends Component {
+        constructor(props) {
+          super(props)
+          this.handleChange = this.handleChange.bind(this)
+        }
+
+        handleChange(e) {
+          this.props.onUpdate(this.props.id, e.target.value)
+        }
+
+        render() {
+          const { content } = this.props
+
+          return html`
+            <div class="paste-container bg-white rounded-lg shadow-md p-4 mb-4">
+              <textarea
+                class="w-full h-32 p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-light"
+                value=${content}
+                onInput=${this.handleChange}
+                placeholder="Enter your text here..."
+              ></textarea>
+            </div>
+          `
+        }
+      }
+
+      // Main App Component
+      class App extends Component {
+        constructor() {
+          super()
+          this.state = {
+            pastes: []
+          }
+
+          this.addPaste = this.addPaste.bind(this)
+          this.updatePaste = this.updatePaste.bind(this)
+          this.savePastes = this.savePastes.bind(this)
+          this.openStorageFile = this.openStorageFile.bind(this)
+        }
+
+        componentDidMount() {
+          // Load pastes from storage
+          this.loadPastes()
+        }
+
+        // Storage handling
+        getStorageProvider() {
+          // Use nosdav.net directly as the primary storage solution
+          console.log('Using nosdav.net as primary storage')
+          return {
+            type: 'nosdav',
+            isPrimary: true,
+            save: async data => {
+              try {
+                const pubkey = localStorage.getItem('pubkey')
+                if (!pubkey) {
+                  console.error('No pubkey found for nosdav storage')
+                  return false
+                }
+
+                const url = `https://nosdav.net/${pubkey}/pastes.json`
+                const response = await fetch(url, {
+                  method: 'PUT',
+                  headers: {
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify(data)
+                })
+
+                if (!response.ok) throw new Error('Network response was not ok')
+                console.log('Pastes saved to nosdav successfully')
+                return true
+              } catch (e) {
+                console.error('Error saving to nosdav:', e)
+                // Fall back to localStorage if nosdav fails
+                if (typeof localStorage !== 'undefined') {
+                  try {
+                    localStorage.setItem('pastes', JSON.stringify(data))
+                    console.log('Pastes saved to localStorage as fallback')
+                    return true
+                  } catch (localErr) {
+                    console.error('Error saving to localStorage:', localErr)
+                  }
+                }
+                return false
+              }
+            },
+            load: async () => {
+              try {
+                const pubkey = localStorage.getItem('pubkey')
+                if (!pubkey) {
+                  console.error('No pubkey found for nosdav storage')
+                  return []
+                }
+
+                const url = `https://nosdav.net/${pubkey}/pastes.json`
+                const response = await fetch(url)
+
+                if (response.status === 404) {
+                  return []
+                }
+
+                if (!response.ok) throw new Error('Network response was not ok')
+                const pastes = await response.json()
+                return pastes
+              } catch (e) {
+                console.error('Error loading from nosdav:', e)
+                // Try to load from localStorage if nosdav fails
+                if (typeof localStorage !== 'undefined') {
+                  try {
+                    const data = localStorage.getItem('pastes')
+                    if (data) {
+                      console.log('Loaded pastes from localStorage as fallback')
+                      return JSON.parse(data)
+                    }
+                  } catch (localErr) {
+                    console.error('Error loading from localStorage:', localErr)
+                  }
+                }
+                return []
+              }
+            }
+          }
+        }
+
+        async savePastes() {
+          const storage = this.getStorageProvider()
+          await storage.save(this.state.pastes)
+          console.log(`Pastes saved to ${storage.type}`)
+        }
+
+        async loadPastes() {
+          const storage = this.getStorageProvider()
+          const pastes = await storage.load()
+
+          if (pastes && pastes.length > 0) {
+            this.setState({ pastes })
+          } else {
+            // Add an initial empty paste if none exist
+            this.addPaste()
+          }
+          console.log(`Pastes loaded from ${storage.type}`)
+        }
+
+        addPaste() {
+          const newPaste = {
+            id: Date.now().toString(),
+            content: ''
+          }
+
+          this.setState(
+            prevState => ({
+              pastes: [...prevState.pastes, newPaste]
+            }),
+            this.savePastes
+          )
+        }
+
+        updatePaste(id, content) {
+          this.setState(
+            prevState => ({
+              pastes: prevState.pastes.map(paste =>
+                paste.id === id ? { ...paste, content } : paste
+              )
+            }),
+            this.savePastes
+          )
+        }
+
+        openStorageFile() {
+          const pubkey = localStorage.getItem('pubkey')
+          if (pubkey) {
+            const url = `https://nosdav.net/${pubkey}/pastes.json`
+            window.open(url, '_blank')
+          } else {
+            alert('No pubkey found. Cannot open storage file.')
+          }
+        }
+
+        render() {
+          const storage = this.getStorageProvider()
+          return html`
+            <div>
+              <${Navbar} />
+              <div class="container mx-auto px-4 py-8">
+                <div class="text-center mb-8">
+                  <h1
+                    class="text-4xl font-bold mb-4 text-transparent bg-clip-text gradient-bg"
+                  >
+                    Pastebin
+                  </h1>
+                  <p class="text-gray-600 mb-6">
+                    Create and save your text snippets
+                  </p>
+                  ${storage.type === 'nosdav'
+                    ? html`<div
+                        class="mt-2 text-sm text-green-600 bg-green-100 rounded-full px-3 py-1 inline-block mb-3"
+                      >
+                        Using nosdav cloud storage
+                        <button
+                          onClick=${this.openStorageFile}
+                          class="ml-2 text-white rounded-full px-2 py-0.5 text-xs bg-primary hover:bg-primary-dark transition-colors"
+                          title="Open storage file in new tab"
+                        >
+                          View File
+                        </button>
+                      </div>`
+                    : html`<div
+                        class="mt-2 text-sm text-yellow-600 bg-yellow-100 rounded-full px-3 py-1 inline-block mb-3"
+                      >
+                        Using ${storage.type} storage (nosdav not available)
+                      </div>`}
+                  <button
+                    onClick=${this.addPaste}
+                    class="bg-gradient-to-r from-primary-light to-primary text-white px-6 py-2 rounded-full hover:opacity-90 transition-opacity shadow-md"
+                  >
+                    Add New Paste
+                  </button>
+                </div>
+
+                <div class="max-w-3xl mx-auto">
+                  ${this.state.pastes.map(
+                    paste => html`
+                      <${Paste}
+                        key=${paste.id}
+                        id=${paste.id}
+                        content=${paste.content}
+                        onUpdate=${this.updatePaste}
+                      />
+                    `
+                  )}
+                </div>
+              </div>
+            </div>
+          `
+        }
+      }
+
+      // Render the app
+      render(html`<${App} />`, document.getElementById('app'))
+    </script>
+  </body>
+</html>

@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nostr.App</title>
+    <style>
+      :root {
+        --primary: #4a6fa5;
+        --primary-dark: #3a5683;
+        --primary-light: #c5d5e5;
+        --secondary: #8fb8de;
+        --accent: #63c0f5;
+        --text-light: #ffffff;
+        --text-dark: #334155;
+        --card-bg: #f0f7ff;
+        --body-bg: #f8fafc;
+        --sidebar-width: 230px;
+        --header-height: 60px;
+        --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+        --radius-sm: 6px;
+        --radius-md: 12px;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      }
+
+      body {
+        background-color: var(--body-bg);
+        color: var(--text-dark);
+        line-height: 1.5;
+      }
+
+      .header {
+        background: linear-gradient(
+          135deg,
+          var(--primary),
+          var(--primary-dark)
+        );
+        color: var(--text-light);
+        height: var(--header-height);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 25px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .logo {
+        font-size: 26px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        letter-spacing: -0.5px;
+      }
+
+      .logo-dot {
+        color: var(--accent);
+        font-size: 32px;
+        margin-left: -3px;
+      }
+
+      .theme-container {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .theme-select {
+        background-color: rgba(255, 255, 255, 0.15);
+        color: white;
+        border: none;
+        border-radius: var(--radius-sm);
+        padding: 8px 16px;
+        outline: none;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .theme-select:hover {
+        background-color: rgba(255, 255, 255, 0.25);
+      }
+
+      .theme-toggle {
+        background: transparent;
+        border: none;
+        color: white;
+        cursor: pointer;
+        font-size: 18px;
+        width: 38px;
+        height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: all 0.2s ease;
+      }
+
+      .theme-toggle:hover {
+        background-color: rgba(255, 255, 255, 0.15);
+      }
+
+      .sidebar {
+        background: linear-gradient(180deg, var(--primary-dark), #2d4569);
+        color: var(--text-light);
+        width: var(--sidebar-width);
+        position: fixed;
+        top: var(--header-height);
+        left: 0;
+        bottom: 0;
+        padding: 25px 0;
+        overflow-y: auto;
+        box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.1);
+      }
+
+      .sidebar-title {
+        padding: 10px 25px;
+        font-size: 18px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        color: rgba(255, 255, 255, 0.85);
+        margin-bottom: 5px;
+      }
+
+      .sidebar-menu {
+        list-style: none;
+        margin-top: 5px;
+      }
+
+      .sidebar-item {
+        padding: 12px 25px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        transition: all 0.2s ease;
+        font-size: 15px;
+        border-left: 3px solid transparent;
+      }
+
+      .sidebar-item:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+
+      .sidebar-item.active {
+        background-color: rgba(255, 255, 255, 0.15);
+        border-left: 3px solid var(--accent);
+      }
+
+      .sidebar-item-icon {
+        margin-right: 12px;
+        font-size: 12px;
+        color: var(--accent);
+      }
+
+      .main-content {
+        margin-left: var(--sidebar-width);
+        margin-top: var(--header-height);
+        padding: 35px;
+        min-height: calc(100vh - var(--header-height));
+      }
+
+      .section-title {
+        font-size: 30px;
+        font-weight: 700;
+        margin-bottom: 25px;
+        color: var(--primary-dark);
+        letter-spacing: -0.5px;
+      }
+
+      .category-title {
+        font-size: 22px;
+        font-weight: 600;
+        margin: 35px 0 18px 0;
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+      }
+
+      .category-title:before {
+        content: '';
+        display: inline-block;
+        width: 18px;
+        height: 3px;
+        background-color: var(--accent);
+        margin-right: 12px;
+        border-radius: 3px;
+      }
+
+      .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 24px;
+        margin-bottom: 40px;
+      }
+
+      .card {
+        background-color: var(--card-bg);
+        border-radius: var(--radius-md);
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        transition: all 0.25s ease;
+        cursor: pointer;
+        text-decoration: none;
+        color: inherit;
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--shadow-md);
+        background-color: white;
+        border-color: rgba(99, 192, 245, 0.2);
+      }
+
+      .card-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+        background-color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(0, 0, 0, 0.04);
+      }
+
+      .card-icon img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .card-content {
+        flex: 1;
+      }
+
+      .card-title {
+        font-weight: 600;
+        margin-bottom: 6px;
+        font-size: 17px;
+        color: var(--text-dark);
+      }
+
+      .card-description {
+        font-size: 14px;
+        color: rgba(51, 65, 85, 0.8);
+      }
+
+      @media (min-width: 1240px) {
+        .card-grid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+
+      @media (max-width: 768px) {
+        .sidebar {
+          width: 0;
+          overflow: hidden;
+        }
+
+        .main-content {
+          margin-left: 0;
+          padding: 25px;
+        }
+
+        .card-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <script type="application/ld+json" id="app-data">
+      {
+        "appData": {
+          "sidebarItems": [
+            { "id": 1, "name": "All Apps", "icon": "▶", "active": true },
+            { "id": 2, "name": "Utilities", "icon": "▶" }
+          ],
+          "categories": [
+            {
+              "id": 1,
+              "name": "All Apps",
+              "items": [
+                {
+                  "id": 1,
+                  "name": "Todo App",
+                  "description": "Track your tasks and stay organized",
+                  "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIwIiBmaWxsPSIjNEE2RkE1Ii8+PHBhdGggZD0iTTMwIDUwTDQ1IDY1TDcwIDM1IiBmaWxsPSJub25lIiBzdHJva2U9IiNGRkYiIHN0cm9rZS13aWR0aD0iNSIvPjwvc3ZnPg==",
+                  "url": "todo.html"
+                },
+                {
+                  "id": 2,
+                  "name": "Bookmarks",
+                  "description": "Save and organize your favorite links",
+                  "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIwIiBmaWxsPSIjOGZiOGRlIi8+PHBhdGggZD0iTTM1IDI1TDY1IDI1TDY1IDc1TDUwIDYwTDM1IDc1WiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==",
+                  "url": "bookmark.html"
+                },
+                {
+                  "id": 3,
+                  "name": "Pastebin",
+                  "description": "Share code and text snippets",
+                  "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIwIiBmaWxsPSIjM2E1NjgzIi8+PHBhdGggZD0iTTMwIDMwTDcwIDMwTDcwIDcwTDMwIDcwWiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjMiLz48bGluZSB4MT0iNDAiIHkxPSI0MCIgeDI9IjYwIiB5Mj0iNDAiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIyIi8+PGxpbmUgeDE9IjQwIiB5MT0iNTAiIHgyPSI2MCIgeTI9IjUwIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMiIvPjxsaW5lIHgxPSI0MCIgeTE9IjYwIiB4Mj0iNjAiIHkyPSI2MCIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiLz48L3N2Zz4=",
+                  "url": "pastebin.html"
+                }
+              ]
+            },
+            {
+              "id": 2,
+              "name": "Utilities",
+              "items": [
+                {
+                  "id": 4,
+                  "name": "Profile",
+                  "description": "Manage your user profile",
+                  "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIwIiBmaWxsPSIjYzVkNWU1Ii8+PGNpcmNsZSBjeD0iNTAiIGN5PSI0MCIgcj0iMTUiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNMjUgODVDMjUgNjUgNzUgNjUgNzUgODUiIGZpbGw9IiNmZmYiLz48L3N2Zz4=",
+                  "url": "profile.html"
+                },
+                {
+                  "id": 5,
+                  "name": "Key Generator",
+                  "description": "Create a new Nostr identity and key pair",
+                  "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIwIiBmaWxsPSIjZjU5ZDYzIi8+PHBhdGggZD0iTTM1IDUwQzM1IDQwIDQ1IDMwIDU1IDMwQzY1IDMwIDc1IDQwIDc1IDUwQzc1IDYwIDY1IDcwIDU1IDcwIiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iNCIvPjxjaXJjbGUgY3g9IjM1IiBjeT0iNTAiIHI9IjgiIGZpbGw9IiNmZmYiLz48cmVjdCB4PSI2MCIgeT0iNTUiIHdpZHRoPSIxMCIgaGVpZ2h0PSIyMCIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==",
+                  "url": "keygen.html"
+                },
+                {
+                  "id": 6,
+                  "name": "Firehose",
+                  "description": "Simple starter application",
+                  "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIwIiBmaWxsPSIjNjNjMGY1Ii8+PHBhdGggZD0iTTIwIDUwIEMzMCA1MCA0NCAzOCA0NSA2MCBDNDYgNzIgNTUgNzUgNTUgNzUiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSI1IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48cGF0aCBkPSJNMTYgNTAgSDI1IiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIvPjxwYXRoIGQ9Ik01NSA3NSBMNjUgNjAgTDcwIDYyIEw4MCA0NSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjQiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxjaXJjbGUgY3g9IjgwIiBjeT0iNDUiIHI9IjMiIGZpbGw9IiNmZmYiLz48Y2lyY2xlIGN4PSI4NSIgY3k9IjQwIiByPSIyIiBmaWxsPSIjZmZmIi8+PGNpcmNsZSBjeD0iNzkiIGN5PSIzNSIgcj0iMiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==",
+                  "url": "firehose.html"
+                },
+                {
+                  "id": 7,
+                  "name": "Wallet",
+                  "description": "Manage your digital assets",
+                  "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIwIiBmaWxsPSIjNWRiNTc1Ii8+PHJlY3QgeD0iMjUiIHk9IjMwIiB3aWR0aD0iNTUiIGhlaWdodD0iNDAiIHJ4PSI1IiBmaWxsPSIjZmZmIi8+PHJlY3QgeD0iNjAiIHk9IjQwIiB3aWR0aD0iMjUiIGhlaWdodD0iMjAiIHJ4PSI0IiBmaWxsPSIjNWRiNTc1Ii8+PGNpcmNsZSBjeD0iNzAiIGN5PSI1MCIgcj0iMyIgZmlsbD0iI2ZmZiIvPjxwYXRoIGQ9Ik0yMCA0MCBMMjUgMzBMNzAgMzAgTDYzIDQwIiBmaWxsPSIjZWVlIiBzdHJva2U9IiNkZGQiIHN0cm9rZS13aWR0aD0iMSIvPjwvc3ZnPg==",
+                  "url": "wallet.html"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    </script>
+
+    <script type="module">
+      import {
+        h,
+        render,
+        Component,
+        Fragment
+      } from 'https://esm.sh/preact@10.13.1'
+      import { useState } from 'https://esm.sh/preact@10.13.1/hooks'
+      import htm from 'https://esm.sh/htm@3.1.1'
+      // Import SweetAlert and secp256k1 libraries
+      import Swal from 'https://cdn.jsdelivr.net/npm/sweetalert2@11/+esm'
+      import * as secp256k1 from 'https://cdn.jsdelivr.net/npm/@noble/secp256k1@1.7.1/+esm'
+
+      // Initialize htm with Preact
+      const html = htm.bind(h)
+
+      // Load data from the data island
+      const loadAppData = () => {
+        try {
+          const dataElement = document.getElementById('app-data')
+          if (!dataElement) {
+            console.error('App data element not found')
+            return { sidebarItems: [], categories: [] }
+          }
+          const appData = JSON.parse(dataElement.textContent).appData
+          return appData || { sidebarItems: [], categories: [] }
+        } catch (error) {
+          console.error('Error loading app data:', error)
+          return { sidebarItems: [], categories: [] }
+        }
+      }
+
+      // Get app data from the data island
+      const appData = loadAppData()
+      const { sidebarItems, categories } = appData
+
+      // Header component
+      const Header = ({ user, onLogin, onLogout }) => {
+        const displayText = user
+          ? user.pubkey.substring(0, 8)
+          : 'Login with Nostr'
+
+        return html`
+          <header class="header">
+            <div class="logo">Nostr<span class="logo-dot">.</span>App</div>
+            <div class="theme-container">
+              ${user
+                ? html`<button onClick=${onLogout} class="theme-select">
+                    Logout (${displayText})
+                  </button>`
+                : html`<button onClick=${onLogin} class="theme-select">
+                    Login with Nostr
+                  </button>`}
+            </div>
+          </header>
+        `
+      }
+
+      // Sidebar component
+      const Sidebar = ({ items }) => {
+        return html`
+          <div class="sidebar">
+            <div class="sidebar-title">App Categories</div>
+            <ul class="sidebar-menu">
+              ${items.map(
+                item => html`
+                  <li class="sidebar-item ${item.active ? 'active' : ''}">
+                    <span class="sidebar-item-icon">${item.icon}</span>
+                    ${item.name}
+                  </li>
+                `
+              )}
+            </ul>
+          </div>
+        `
+      }
+
+      // Card component
+      const Card = ({ app }) => {
+        return html`
+          <a href=${app.url} class="card">
+            <div class="card-icon">
+              <img src=${app.icon} alt=${app.name} />
+            </div>
+            <div class="card-content">
+              <div class="card-title">${app.name}</div>
+              ${app.description &&
+              html`<div class="card-description">${app.description}</div>`}
+            </div>
+          </a>
+        `
+      }
+
+      // Main content component
+      const MainContent = ({ apps }) => {
+        return html`
+          <div class="main-content">
+            <h1 class="section-title">App Directory</h1>
+
+            ${apps.map(
+              category => html`
+                <h2 class="category-title">${category.name}</h2>
+                <div class="card-grid">
+                  ${category.items.map(app => html`<${Card} app=${app} />`)}
+                </div>
+              `
+            )}
+          </div>
+        `
+      }
+
+      class App extends Component {
+        constructor() {
+          super()
+          this.state = {
+            user: null,
+            sidebarItems,
+            categories,
+            pubkey: localStorage.getItem('pubkey') || null,
+            privkey: localStorage.getItem('nostr:privkey') || null
+          }
+        }
+
+        componentDidMount() {
+          // Check if user is logged in via Nostr
+          this.checkNostrLogin()
+
+          // Check for private key in URL hash
+          const hash = window.location.hash.substring(1) // Remove the # character
+          if (hash && hash.length === 64 && /^[0-9a-fA-F]+$/.test(hash)) {
+            // Valid private key in hash, use it to login
+            this.loginWithPrivkey(hash)
+
+            // Clean URL by removing the hash to protect privacy
+            window.history.replaceState(
+              null,
+              null,
+              window.location.pathname + window.location.search
+            )
+          }
+        }
+
+        checkNostrLogin() {
+          // Check if user is already logged in
+          if (
+            localStorage.getItem('loggedIn') === 'true' &&
+            localStorage.getItem('pubkey')
+          ) {
+            const pubkey = localStorage.getItem('pubkey')
+            this.setState({ user: { pubkey } })
+          }
+        }
+
+        handleLogin = async () => {
+          const { value: loginMethod } = await Swal.fire({
+            title: 'Login',
+            html: `
+              <button id="extensionLogin" class="swal2-confirm swal2-styled" style="display:block; width:100%; margin:10px auto;">Sign in with Nostr extension</button>
+              <input id="privkeyInput" type="text" placeholder="Or enter your 64-character hex private key" class="swal2-input" style="display:block; width:100%; margin:10px auto;">
+              <p style="margin-top: 10px; font-size: 0.9em;"><a href="https://nostrapps.github.io/extensions/" target="_blank">What is a Nostr extension?</a></p>
+            `,
+            showConfirmButton: false,
+            showCloseButton: true,
+            focusConfirm: false,
+            didOpen: () => {
+              const extensionButton =
+                Swal.getPopup().querySelector('#extensionLogin')
+              const privkeyInput =
+                Swal.getPopup().querySelector('#privkeyInput')
+
+              extensionButton.addEventListener('click', () => {
+                Swal.clickConfirm()
+              })
+
+              privkeyInput.addEventListener('keyup', e => {
+                if (e.key === 'Enter') {
+                  Swal.clickConfirm()
+                }
+              })
+
+              // Add paste event listener
+              privkeyInput.addEventListener('paste', e => {
+                setTimeout(() => {
+                  if (
+                    privkeyInput.value.length === 64 &&
+                    /^[0-9a-fA-F]+$/.test(privkeyInput.value)
+                  ) {
+                    Swal.clickConfirm()
+                  }
+                }, 0)
+              })
+            },
+            preConfirm: () => {
+              const privkey =
+                Swal.getPopup().querySelector('#privkeyInput').value
+              if (
+                privkey &&
+                (privkey.length !== 64 || !/^[0-9a-fA-F]+$/.test(privkey))
+              ) {
+                Swal.showValidationMessage(
+                  'Invalid private key format. Please enter a 64-character hex string.'
+                )
+                return false
+              }
+              return {
+                loginMethod: privkey ? 'privkey' : 'extension',
+                privkey
+              }
+            }
+          })
+
+          if (loginMethod) {
+            if (loginMethod.loginMethod === 'privkey') {
+              this.loginWithPrivkey(loginMethod.privkey)
+            } else {
+              // Check for localStorage privkey first
+              const storedPrivkey = localStorage.getItem('nostr:privkey')
+              if (storedPrivkey) {
+                this.loginWithPrivkey(storedPrivkey)
+              } else {
+                this.loginWithExtension()
+              }
+            }
+          }
+        }
+
+        loginWithExtension = async () => {
+          if (window.nostr) {
+            try {
+              const pubkey = await window.nostr.getPublicKey()
+              this.setState({ user: { pubkey } }, () => {
+                localStorage.setItem('loggedIn', 'true')
+                localStorage.setItem('pubkey', pubkey)
+                Swal.fire({
+                  title: 'Logged in!',
+                  text: 'You have successfully logged in with your Nostr extension.',
+                  icon: 'success',
+                  timer: 1000,
+                  showConfirmButton: false
+                })
+              })
+            } catch (error) {
+              console.error('Login failed:', error)
+              Swal.fire({
+                title: 'Login Failed',
+                text: 'There was an error logging in with your Nostr extension.',
+                icon: 'error',
+                timer: 1000,
+                showConfirmButton: false
+              })
+            }
+          } else {
+            Swal.fire({
+              title: 'Extension Not Found',
+              text: 'Nostr extension not found. Please install a Nostr browser extension.',
+              icon: 'warning',
+              timer: 1000,
+              showConfirmButton: false
+            })
+          }
+        }
+
+        loginWithPrivkey = async privkey => {
+          if (privkey) {
+            try {
+              const pubkey = secp256k1.utils.bytesToHex(
+                secp256k1.schnorr.getPublicKey(privkey)
+              )
+              this.setState({ user: { pubkey }, privkey }, () => {
+                localStorage.setItem('loggedIn', 'true')
+                localStorage.setItem('pubkey', pubkey)
+                localStorage.setItem('nostr:privkey', privkey)
+                Swal.fire({
+                  title: 'Logged in!',
+                  text: 'You have successfully logged in with your private key.',
+                  icon: 'success',
+                  timer: 1000,
+                  showConfirmButton: false
+                })
+              })
+            } catch (error) {
+              console.error('Login failed:', error)
+              Swal.fire({
+                title: 'Login Failed',
+                text: 'There was an error generating the public key from the provided private key.',
+                icon: 'error',
+                timer: 1000,
+                showConfirmButton: false
+              })
+            }
+          }
+        }
+
+        handleLogout = () => {
+          this.setState({ user: null, privkey: null })
+          localStorage.setItem('loggedIn', 'false')
+          localStorage.removeItem('pubkey')
+          localStorage.removeItem('nostr:privkey')
+
+          Swal.fire({
+            title: 'Logged out!',
+            text: 'You have successfully logged out.',
+            icon: 'success',
+            timer: 1000,
+            showConfirmButton: false
+          })
+        }
+
+        render() {
+          const { user, sidebarItems, categories } = this.state
+
+          return html`
+            <div>
+              <${Header}
+                user=${user}
+                onLogin=${this.handleLogin}
+                onLogout=${this.handleLogout}
+              />
+              <${Sidebar} items=${sidebarItems} />
+              <${MainContent} apps=${categories} />
+            </div>
+          `
+        }
+      }
+
+      render(html`<${App} />`, document.getElementById('app'))
+    </script>
+  </body>
+</html>
