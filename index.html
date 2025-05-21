@@ -2,13 +2,27 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mapa Contraentrega Cali</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1a1a1a">
+  <meta name="description" content="Sistema de Navegación para Delivery - Contraentrega Cali">
+  <title>Navegación Delivery | Contraentrega Cali</title>
+  
+  <!-- Configuración TWA avanzada -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="application-name" content="Contraentrega Nav">
+  <meta name="apple-mobile-web-app-title" content="Contraentrega Nav">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
+  
   <style>
     :root {
       --primary-color: #1a1a1a;
       --secondary-color: #333;
       --accent-color: #0066cc;
+      --danger-color: #e74c3c;
+      --success-color: #2ecc71;
       --text-color: #333;
       --light-text: #fff;
       --bg-light: #f8f8f8;
@@ -24,64 +38,91 @@
     }
     
     body { 
-      font-family: 'Roboto', sans-serif; 
+      font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif; 
       color: var(--text-color); 
-      line-height: 1.6; 
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
       touch-action: manipulation;
       overflow-x: hidden;
+      -webkit-tap-highlight-color: transparent;
     }
     
-    #contenedor-mapa { 
-      height: 100vh; 
+    #contenedor-principal { 
+      height: 100vh;
+      width: 100vw;
       display: flex; 
-      flex-direction: column; 
+      flex-direction: column;
+      position: relative;
     }
     
     #barra-superior { 
       display: flex; 
       gap: 0.8rem; 
       padding: 0.8rem; 
-      background: var(--bg-light); 
+      background: var(--primary-color);
+      color: var(--light-text);
       width: 100%;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      z-index: 1000;
     }
     
     #buscador { 
       flex: 1; 
-      padding: 0.6rem 1.2rem; 
-      border: 1px solid #ddd; 
+      padding: 0.8rem 1.2rem; 
+      border: none; 
       border-radius: 24px; 
       appearance: none; 
-      font-size: 16px;
+      font-size: 0.95rem;
       transition: var(--transition);
+      background: rgba(255,255,255,0.9);
     }
     
     #buscador:focus {
       outline: none;
-      border-color: var(--accent-color);
-      box-shadow: 0 0 0 2px rgba(0,102,204,0.2);
+      background: white;
+      box-shadow: 0 0 0 2px var(--accent-color);
     }
     
     .btn { 
-      background: var(--primary-color); 
+      background: var(--accent-color); 
       color: var(--light-text); 
-      padding: 0.6rem 1.2rem; 
+      padding: 0.8rem 1.4rem; 
       border-radius: 24px; 
-      text-decoration: none;
       font-weight: 500;
       transition: var(--transition);
       border: none;
       cursor: pointer;
       white-space: nowrap;
+      font-size: 0.95rem;
+      min-width: 80px;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     
     .btn:hover {
-      background: var(--secondary-color);
+      opacity: 0.9;
       transform: translateY(-1px);
+    }
+    
+    .btn-secondary {
+      background: var(--secondary-color);
+    }
+    
+    .btn-danger {
+      background: var(--danger-color);
+    }
+    
+    .btn-success {
+      background: var(--success-color);
     }
     
     #mapa { 
       flex: 1; 
-      background: #f0f0f0; 
+      background: #f0f0f0;
+      z-index: 1;
     }
     
     .cluster-marcadores { 
@@ -92,6 +133,7 @@
       align-items: center;
       justify-content: center;
       font-weight: bold;
+      font-size: 0.9rem;
     }
     
     .leaflet-control-layers { 
@@ -101,158 +143,691 @@
       box-shadow: var(--box-shadow);
     }
     
+    .btn-group {
+      display: flex;
+      gap: 0.5rem;
+    }
+    
+    #panel-navegacion {
+      position: absolute;
+      bottom: 1rem;
+      left: 1rem;
+      right: 1rem;
+      background: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      padding: 1rem;
+      z-index: 1000;
+      transform: translateY(150%);
+      transition: var(--transition);
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    
+    #panel-navegacion.visible {
+      transform: translateY(0);
+    }
+    
+    #panel-navegacion h3 {
+      margin-bottom: 0.5rem;
+      color: var(--accent-color);
+    }
+    
+    #panel-navegacion p {
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+    }
+    
+    #ruta-info {
+      margin: 1rem 0;
+      padding: 0.5rem;
+      background: var(--bg-light);
+      border-radius: var(--border-radius);
+    }
+    
+    .ruta-detalle {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+    
+    .ruta-etiqueta {
+      font-weight: bold;
+    }
+    
+    #instrucciones-navegacion {
+      max-height: 150px;
+      overflow-y: auto;
+      margin-bottom: 1rem;
+      padding-right: 0.5rem;
+    }
+    
+    .instruccion {
+      display: flex;
+      margin-bottom: 0.5rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .instruccion-icono {
+      margin-right: 0.5rem;
+      color: var(--accent-color);
+      min-width: 20px;
+    }
+    
+    .instruccion-texto {
+      flex: 1;
+    }
+    
     @media (max-width: 768px) { 
       #barra-superior { 
-        flex-direction: column; 
-        gap: 0.6rem;
+        padding: 0.6rem; 
       }
+      
+      #buscador {
+        padding: 0.7rem 1rem;
+      }
+      
+      .btn {
+        padding: 0.7rem 1rem;
+      }
+      
+      .btn-group {
+        width: 100%;
+      }
+      
+      .btn-group .btn {
+        flex: 1;
+      }
+    }
+    
+    /* Estilos para el popup */
+    .popup-navegacion {
+      min-width: 250px;
+    }
+    
+    .popup-titulo {
+      color: var(--accent-color);
+      margin: 0 0 5px 0;
+      font-size: 1.1rem;
+    }
+    
+    .popup-direccion {
+      margin: 0 0 8px 0;
+      font-size: 0.9rem;
+      color: #555;
+    }
+    
+    .popup-detalle {
+      margin: 0 0 5px 0;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+    }
+    
+    .popup-detalle i {
+      margin-right: 5px;
+      width: 15px;
+      text-align: center;
+    }
+    
+    .popup-botones {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 10px;
+    }
+    
+    .popup-boton {
+      flex: 1;
+      text-align: center;
+      padding: 6px 12px;
+      background: var(--accent-color);
+      color: white;
+      border-radius: 4px;
+      text-decoration: none;
+      font-size: 0.85rem;
+    }
+    
+    /* Loader */
+    #loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      display: none;
+    }
+    
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 5px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: var(--accent-color);
+      animation: spin 1s ease-in-out infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Notificación */
+    #notificacion {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--primary-color);
+      color: white;
+      padding: 10px 20px;
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      z-index: 2000;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    #notificacion.mostrar {
+      opacity: 1;
     }
   </style>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
-  <div id="contenedor-mapa">
+  <div id="contenedor-principal">
     <div id="barra-superior">
-      <input type="search" id="buscador" placeholder="Buscar ubicación en Cali..." enterkeyhint="search">
-      <button class="btn">Buscar</button>
+      <input type="search" id="buscador" placeholder="Buscar ubicación..." enterkeyhint="search">
+      <div class="btn-group">
+        <button class="btn btn-secondary" id="btnBuscar">
+          <i class="fas fa-search"></i>
+        </button>
+        <button class="btn" id="btnMiUbicacion">
+          <i class="fas fa-location-arrow"></i>
+        </button>
+      </div>
     </div>
+    
     <div id="mapa"></div>
+    
+    <div id="panel-navegacion">
+      <h3 id="destino-titulo">Destino</h3>
+      <p id="destino-direccion">Dirección del destino</p>
+      
+      <div id="ruta-info">
+        <div class="ruta-detalle">
+          <span class="ruta-etiqueta">Distancia:</span>
+          <span id="ruta-distancia">--</span>
+        </div>
+        <div class="ruta-detalle">
+          <span class="ruta-etiqueta">Tiempo estimado:</span>
+          <span id="ruta-tiempo">--</span>
+        </div>
+      </div>
+      
+      <div id="instrucciones-navegacion">
+        <!-- Instrucciones de navegación se insertarán aquí -->
+      </div>
+      
+      <div class="btn-group">
+        <button class="btn btn-danger" id="btnCancelarRuta">
+          <i class="fas fa-times"></i> Cancelar
+        </button>
+        <button class="btn btn-success" id="btnIniciarNavegacion">
+          <i class="fas fa-play"></i> Iniciar
+        </button>
+      </div>
+    </div>
+    
+    <div id="loader">
+      <div class="spinner"></div>
+    </div>
+    
+    <div id="notificacion"></div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
   <script>
+    // Variables globales
+    let mapa;
+    let marcadorSeleccionado = null;
+    let ubicacionUsuario = null;
+    let controlRuta = null;
+    let watchId = null;
+    let rutaActiva = false;
+    let capaRuta = null;
+    let capaMarcadorUsuario = null;
+    
+    // Iconos personalizados
+    const iconoUsuario = L.divIcon({
+      html: '<div style="background:var(--accent-color);border:2px solid white;border-radius:50%;width:20px;height:20px;"></div>',
+      className: '',
+      iconSize: [20, 20]
+    });
+    
+    const iconoDestino = L.icon({
+      iconUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path fill="%23e74c3c" d="M172.268 501.67C26.97 291.031 0 269.413 0 192 0 85.961 85.961 0 192 0s192 85.961 192 192c0 77.413-26.97 99.031-172.268 309.67-9.535 13.774-29.93 13.773-39.464 0z"/></svg>',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34]
+    });
+    
+    // Inicializar el mapa
     function initializeMap() {
-      // Configuración de capas
-      const capas = {
-        "Maxar": L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-          attribution: 'Satellite: Maxar WorldView Legion',
-          maxZoom: 18,
-          maxNativeZoom: 18,
-          detectRetina: true
+      // Configuración de capas base
+      const capasBase = {
+        "Mapa Satelital": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          attribution: 'Satélite: Maxar',
+          maxZoom: 19
         }),
-        "OSM": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap contributors',
+        "OpenStreetMap": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap',
+          maxZoom: 19
+        }),
+        "OSM Transporte": L.tileLayer('https://{s}.tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=6170aad10dfd42a38d4d8c709a536f38', {
+          attribution: '© OSM/Thunderforest',
           maxZoom: 19
         })
       };
-
-      // Inicializar mapa
-      const mapa = L.map('mapa', {
-        center: [3.484941, -76.545259], // Coordenadas de Cali
+      
+      // Inicializar mapa con vista de Cali
+      mapa = L.map('mapa', {
+        center: [3.43722, -76.5225],
         zoom: 12,
-        layers: [capas["Maxar"]],
-        zoomControl: false
+        layers: [capasBase["OSM Transporte"]],
+        zoomControl: false,
+        tap: false,
+        preferCanvas: true
       });
-
-      // Controles del mapa
+      
+      // Añadir controles
       L.control.zoom({ position: 'bottomright' }).addTo(mapa);
-      L.control.layers(capas, null, { 
-        position: 'topright',
-        collapsed: false
-      }).addTo(mapa);
-
-      // Sistema de marcadores
+      L.control.layers(capasBase, null, { position: 'topright' }).addTo(mapa);
+      
+      // Configurar clustering de marcadores
       const clusters = L.markerClusterGroup({
-        iconCreateFunction: cluster => L.divIcon({
-          html: `<div>${cluster.getChildCount()}</div>`,
-          className: 'cluster-marcadores',
-          iconSize: [40, 40]
-        }),
+        iconCreateFunction: function(cluster) {
+          return L.divIcon({
+            html: `<div>${cluster.getChildCount()}</div>`,
+            className: 'cluster-marcadores',
+            iconSize: [40, 40]
+          });
+        },
         spiderfyOnMaxZoom: true,
         showCoverageOnHover: false,
         zoomToBoundsOnClick: true
       });
-
-      // Datos de ubicaciones en Cali
+      
+      // Datos de ubicaciones (puntos de entrega)
       const ubicaciones = [
-        { 
-          "nombre": "@montebellocali", 
-          "direccion": "QR Contraentrega Sector Tanques Montebello, Cali, Valle del Cauca", 
-          "latlng": [3.484941, -76.545259], 
-          "url": "https://montebellocali.contraentregaco.com/",
-          "telefono": "+57 3215340988",
-          "horario": "24/7",
-          "servicios": "Almacenamiento, Distribución, Logística"
+        {
+          nombre: "Almacén Principal",
+          direccion: "Calle 23N #5N-45, Cali",
+          latlng: [3.451647, -76.532845],
+          telefono: "+57 602 5247896",
+          horario: "Lun-Vie: 8AM - 6PM",
+          servicios: "Recogida, Entrega, Almacenamiento"
         },
-        { 
-          "nombre": "Centro Logístico Sur", 
-          "direccion": "Carrera 123 #45-67, Cali", 
-          "latlng": [3.420515, -76.522166], 
-          "url": "/centro-logistico-sur",
-          "telefono": "+57 123 456 7891",
-          "horario": "Lunes a Viernes: 8AM - 6PM"
+        {
+          nombre: "Centro Logístico Sur",
+          direccion: "Carrera 123 #45-67, Cali",
+          latlng: [3.420515, -76.522166],
+          telefono: "+57 602 5897412",
+          horario: "Lun-Sab: 7AM - 7PM",
+          servicios: "Distribución rápida"
         },
-        { 
-          "nombre": "Oficina Principal", 
-          "direccion": "Avenida 5N #23N-45, Cali", 
-          "latlng": [3.451647, -76.532845], 
-          "url": "/contacto",
-          "telefono": "+57 123 456 7892",
-          "horario": "Lunes a Sábado: 7AM - 7PM"
+        {
+          nombre: "@montebellocali",
+          direccion: "Sector Tanques Montebello, Cali",
+          latlng: [3.484941, -76.545259],
+          telefono: "+57 321 5340988",
+          horario: "24/7",
+          servicios: "QR Contraentrega"
         }
       ];
-
-      // Crear marcadores
-      const todosMarcadores = [];
+      
+      // Añadir marcadores al cluster
       ubicaciones.forEach(loc => {
-        const marcador = L.marker(loc.latlng).bindPopup(`
-          <div style="min-width:220px">
-            <h3 style="margin:0 0 5px 0;color:var(--accent-color)">${loc.nombre}</h3>
-            <p style="margin:0 0 8px 0;font-size:0.9em">${loc.direccion}</p>
-            ${loc.telefono ? `<p style="margin:0 0 5px 0;font-size:0.9em"><i class="fas fa-phone" style="margin-right:5px"></i> ${loc.telefono}</p>` : ''}
-            ${loc.horario ? `<p style="margin:0 0 5px 0;font-size:0.9em"><i class="fas fa-clock" style="margin-right:5px"></i> ${loc.horario}</p>` : ''}
-            ${loc.servicios ? `<p style="margin:0 0 8px 0;font-size:0.9em"><i class="fas fa-boxes" style="margin-right:5px"></i> ${loc.servicios}</p>` : ''}
-            <a href="${loc.url}" style="display:inline-block;background:var(--accent-color);color:white;padding:6px 12px;border-radius:4px;text-decoration:none;margin-top:5px;font-size:0.9em">Más información</a>
+        const marcador = L.marker(loc.latlng, { icon: iconoDestino }).bindPopup(`
+          <div class="popup-navegacion">
+            <h3 class="popup-titulo">${loc.nombre}</h3>
+            <p class="popup-direccion">${loc.direccion}</p>
+            <p class="popup-detalle"><i class="fas fa-phone"></i> ${loc.telefono}</p>
+            <p class="popup-detalle"><i class="fas fa-clock"></i> ${loc.horario}</p>
+            <p class="popup-detalle"><i class="fas fa-boxes"></i> ${loc.servicios}</p>
+            <div class="popup-botones">
+              <a href="#" class="popup-boton" onclick="iniciarNavegacionDesdePopup(${loc.latlng[0]}, ${loc.latlng[1]}, '${loc.nombre}', '${loc.direccion}'); return false;">
+                <i class="fas fa-route"></i> Navegar
+              </a>
+            </div>
           </div>
         `);
         
-        marcador.datosBusqueda = `${loc.nombre} ${loc.direccion} ${loc.telefono || ''} ${loc.servicios || ''}`.toLowerCase();
-        todosMarcadores.push(marcador);
+        marcador.datosBusqueda = `${loc.nombre} ${loc.direccion} ${loc.telefono} ${loc.servicios}`.toLowerCase();
+        clusters.addLayer(marcador);
       });
-
-      // Añadir marcadores al mapa
-      clusters.addLayers(todosMarcadores);
+      
       mapa.addLayer(clusters);
-
-      // Búsqueda
-      const searchInput = document.getElementById('buscador');
-      let searchTimeout;
-
-      const handleSearch = () => {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-          const termino = searchInput.value.toLowerCase().trim();
-          clusters.clearLayers();
+      
+      // Configurar búsqueda
+      configurarBusqueda(clusters);
+      
+      // Configurar botones
+      document.getElementById('btnMiUbicacion').addEventListener('click', obtenerUbicacionUsuario);
+      document.getElementById('btnCancelarRuta').addEventListener('click', cancelarNavegacion);
+      document.getElementById('btnIniciarNavegacion').addEventListener('click', iniciarNavegacion);
+      
+      // Inicializar geolocalización
+      obtenerUbicacionUsuario();
+    }
+    
+    // Configurar sistema de búsqueda
+    function configurarBusqueda(cluster) {
+      const buscador = document.getElementById('buscador');
+      let timeout;
+      
+      buscador.addEventListener('input', function() {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          const termino = this.value.toLowerCase().trim();
           
-          if(termino === '') {
-            clusters.addLayers(todosMarcadores);
+          if (termino === '') {
+            cluster.addLayers(cluster.getAllChildMarkers());
             return;
           }
           
-          const filtrados = todosMarcadores.filter(m => 
-            m.datosBusqueda.includes(termino)
-          );
+          const marcadoresFiltrados = cluster.getAllChildMarkers().filter(m => {
+            return m.datosBusqueda.includes(termino);
+          });
           
-          clusters.addLayers(filtrados);
+          cluster.clearLayers();
+          cluster.addLayers(marcadoresFiltrados);
           
-          if(filtrados.length > 0) {
-            mapa.fitBounds(clusters.getBounds().pad(0.3));
+          if (marcadoresFiltrados.length > 0) {
+            mapa.fitBounds(cluster.getBounds().pad(0.3));
           }
         }, 300);
-      };
-
-      searchInput.addEventListener('input', handleSearch);
-      searchInput.addEventListener('search', handleSearch);
-
-      // Ajustar vista a los marcadores
-      if(todosMarcadores.length > 0) {
-        mapa.fitBounds(clusters.getBounds().pad(0.3));
+      });
+      
+      // Permitir búsqueda al presionar Enter
+      buscador.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          this.blur();
+        }
+      });
+    }
+    
+    // Obtener ubicación del usuario
+    function obtenerUbicacionUsuario() {
+      mostrarLoader('Obteniendo ubicación...');
+      
+      if (capaMarcadorUsuario) {
+        mapa.removeLayer(capaMarcadorUsuario);
+      }
+      
+      if (navigator.geolocation) {
+        // Detener cualquier seguimiento previo
+        if (watchId) {
+          navigator.geolocation.clearWatch(watchId);
+        }
+        
+        watchId = navigator.geolocation.watchPosition(
+          posicion => {
+            const lat = posicion.coords.latitude;
+            const lng = posicion.coords.longitude;
+            ubicacionUsuario = [lat, lng];
+            
+            // Actualizar o crear marcador de usuario
+            if (capaMarcadorUsuario) {
+              capaMarcadorUsuario.setLatLng([lat, lng]);
+            } else {
+              capaMarcadorUsuario = L.marker([lat, lng], {
+                icon: iconoUsuario,
+                zIndexOffset: 1000
+              }).addTo(mapa);
+            }
+            
+            // Centrar mapa en la ubicación del usuario
+            mapa.setView([lat, lng], 15);
+            ocultarLoader();
+            
+            // Si hay ruta activa, actualizarla
+            if (rutaActiva && marcadorSeleccionado) {
+              calcularRuta([lat, lng], marcadorSeleccionado.getLatLng());
+            }
+          },
+          error => {
+            console.error('Error obteniendo ubicación:', error);
+            mostrarNotificacion('No se pudo obtener la ubicación. Asegúrate de habilitar los permisos.');
+            ocultarLoader();
+          },
+          {
+            enableHighAccuracy: true,
+            maximumAge: 10000,
+            timeout: 5000
+          }
+        );
+      } else {
+        mostrarNotificacion('Geolocalización no soportada por tu navegador');
+        ocultarLoader();
       }
     }
-
+    
+    // Iniciar navegación desde popup
+    window.iniciarNavegacionDesdePopup = function(lat, lng, nombre, direccion) {
+      const destino = L.latLng(lat, lng);
+      
+      // Crear o actualizar marcador de destino
+      if (marcadorSeleccionado) {
+        marcadorSeleccionado.setLatLng(destino);
+      } else {
+        marcadorSeleccionado = L.marker(destino, {
+          icon: iconoDestino,
+          zIndexOffset: 1000
+        }).addTo(mapa);
+      }
+      
+      // Actualizar panel de navegación
+      document.getElementById('destino-titulo').textContent = nombre;
+      document.getElementById('destino-direccion').textContent = direccion;
+      
+      // Mostrar panel de navegación
+      document.getElementById('panel-navegacion').classList.add('visible');
+      
+      // Calcular ruta si tenemos ubicación del usuario
+      if (ubicacionUsuario) {
+        calcularRuta(ubicacionUsuario, destino);
+      } else {
+        mostrarNotificacion('Obteniendo tu ubicación...');
+        obtenerUbicacionUsuario();
+      }
+    };
+    
+    // Calcular ruta entre dos puntos
+    function calcularRuta(origen, destino) {
+      mostrarLoader('Calculando ruta...');
+      rutaActiva = true;
+      
+      // Eliminar ruta anterior si existe
+      if (controlRuta) {
+        mapa.removeControl(controlRuta);
+      }
+      if (capaRuta) {
+        mapa.removeLayer(capaRuta);
+      }
+      
+      // Configurar el servicio de ruteo (usando OSRM)
+      controlRuta = L.Routing.control({
+        waypoints: [
+          L.latLng(origen[0], origen[1]),
+          L.latLng(destino.lat, destino.lng)
+        ],
+        routeWhileDragging: false,
+        showAlternatives: false,
+        addWaypoints: false,
+        draggableWaypoints: false,
+        fitSelectedRoutes: true,
+        show: false, // No mostrar el control estándar
+        router: L.Routing.osrmv1({
+          serviceUrl: 'https://router.project-osrm.org/route/v1',
+          profile: 'driving'
+        })
+      }).addTo(mapa);
+      
+      // Escuchar cuando la ruta esté calculada
+      controlRuta.on('routesfound', function(e) {
+        const rutas = e.routes;
+        const ruta = rutas[0];
+        
+        // Mostrar información de la ruta
+        document.getElementById('ruta-distancia').textContent = (ruta.summary.totalDistance / 1000).toFixed(1) + ' km';
+        document.getElementById('ruta-tiempo').textContent = Math.round(ruta.summary.totalTime / 60) + ' min';
+        
+        // Mostrar instrucciones
+        const instruccionesContainer = document.getElementById('instrucciones-navegacion');
+        instruccionesContainer.innerHTML = '';
+        
+        ruta.instructions.forEach((instruccion, index) => {
+          const div = document.createElement('div');
+          div.className = 'instruccion';
+          
+          let icono = '';
+          switch(instruccion.type) {
+            case 'Left': icono = '<i class="fas fa-arrow-left"></i>'; break;
+            case 'Right': icono = '<i class="fas fa-arrow-right"></i>'; break;
+            case 'Straight': icono = '<i class="fas fa-arrow-up"></i>'; break;
+            case 'Start': icono = '<i class="fas fa-flag-checkered"></i>'; break;
+            case 'Destination': icono = '<i class="fas fa-flag"></i>'; break;
+            default: icono = '<i class="fas fa-arrow-up"></i>';
+          }
+          
+          div.innerHTML = `
+            <div class="instruccion-icono">${icono}</div>
+            <div class="instruccion-texto">
+              ${instruccion.text} <span style="color:#777">(${(instruccion.distance/1000).toFixed(1)} km)</span>
+            </div>
+          `;
+          
+          instruccionesContainer.appendChild(div);
+        });
+        
+        ocultarLoader();
+      });
+      
+      controlRuta.on('routingerror', function(e) {
+        console.error('Error al calcular ruta:', e.error);
+        mostrarNotificacion('Error al calcular la ruta. Intenta nuevamente.');
+        ocultarLoader();
+      });
+    }
+    
+    // Iniciar navegación
+    function iniciarNavegacion() {
+      if (!marcadorSeleccionado || !ubicacionUsuario) return;
+      
+      rutaActiva = true;
+      mostrarNotificacion('Navegación iniciada. Siguiendo tu ubicación...');
+      
+      // Centrar en la ubicación del usuario
+      mapa.setView(ubicacionUsuario, 16);
+      
+      // Configurar seguimiento de ubicación con mayor precisión
+      if (watchId) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+      
+      watchId = navigator.geolocation.watchPosition(
+        posicion => {
+          const lat = posicion.coords.latitude;
+          const lng = posicion.coords.longitude;
+          ubicacionUsuario = [lat, lng];
+          
+          capaMarcadorUsuario.setLatLng([lat, lng]);
+          
+          // Mantener el mapa centrado en la ubicación del usuario durante la navegación
+          if (rutaActiva) {
+            mapa.setView([lat, lng], 16);
+          }
+        },
+        error => {
+          console.error('Error en seguimiento:', error);
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: 5000
+        }
+      );
+    }
+    
+    // Cancelar navegación
+    function cancelarNavegacion() {
+      rutaActiva = false;
+      
+      if (controlRuta) {
+        mapa.removeControl(controlRuta);
+        controlRuta = null;
+      }
+      
+      if (capaRuta) {
+        mapa.removeLayer(capaRuta);
+        capaRuta = null;
+      }
+      
+      if (watchId) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+      }
+      
+      document.getElementById('panel-navegacion').classList.remove('visible');
+      mostrarNotificacion('Navegación cancelada');
+    }
+    
+    // Mostrar loader
+    function mostrarLoader(mensaje) {
+      document.getElementById('loader').style.display = 'flex';
+      if (mensaje) {
+        mostrarNotificacion(mensaje);
+      }
+    }
+    
+    // Ocultar loader
+    function ocultarLoader() {
+      document.getElementById('loader').style.display = 'none';
+    }
+    
+    // Mostrar notificación
+    function mostrarNotificacion(mensaje) {
+      const notificacion = document.getElementById('notificacion');
+      notificacion.textContent = mensaje;
+      notificacion.classList.add('mostrar');
+      
+      setTimeout(() => {
+        notificacion.classList.remove('mostrar');
+      }, 3000);
+    }
+    
+    // Registrar Service Worker para PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').then(registration => {
+          console.log('ServiceWorker registrado con éxito:', registration.scope);
+        }).catch(error => {
+          console.log('Error registrando ServiceWorker:', error);
+        });
+      });
+    }
+    
+    // Iniciar la aplicación cuando el DOM esté listo
     document.addEventListener('DOMContentLoaded', initializeMap);
   </script>
 </body>
