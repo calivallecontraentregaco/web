@@ -7,9 +7,203 @@
   <title>Navegación Delivery</title>
   <link rel="manifest" href="manifest.json">
   <style>
-    *{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,sans-serif;overflow:hidden;touch-action:none}#mapa{position:fixed;top:0;left:0;width:100%;height:100%}.control-top{position:fixed;top:10px;left:10px;right:10px;z-index:1000;display:flex;gap:8px}#search{flex:1;padding:12px 15px;border:none;border-radius:24px;background:rgba(255,255,255,0.95);box-shadow:0 2px 10px rgba(0,0,0,0.1)}.btn{background:#0066cc;color:#fff;border:none;border-radius:24px;padding:0 15px;font-weight:500;cursor:pointer;min-width:44px;height:44px;display:flex;align-items:center;justify-content:center}.panel{position:fixed;bottom:-50%;left:0;right:0;background:#fff;border-radius:16px 16px 0 0;padding:20px;box-shadow:0 -4px 12px rgba(0,0,0,0.1);transition:transform .3s;z-index:1001}.panel.visible{transform:translateY(-50%)}.panel-content h3{margin-bottom:8px}.panel-content p{margin-bottom:4px;color:#555}.panel-close{position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px}
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      overflow: hidden;
+      touch-action: none;
+    }
+    
+    #mapa {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+    
+    .control-top {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      z-index: 1000;
+      display: flex;
+      gap: 8px;
+    }
+    
+    #search {
+      flex: 1;
+      padding: 12px 15px;
+      border: none;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      font-size: 16px;
+    }
+    
+    .btn {
+      background: #0066cc;
+      color: #fff;
+      border: none;
+      border-radius: 24px;
+      padding: 0 15px;
+      font-weight: 500;
+      cursor: pointer;
+      min-width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: background 0.2s;
+    }
+    
+    .btn:hover {
+      background: #0055aa;
+    }
+    
+    .btn.secondary {
+      background: #f0f0f0;
+      color: #333;
+    }
+    
+    .btn.secondary:hover {
+      background: #e0e0e0;
+    }
+    
+    .panel {
+      position: fixed;
+      bottom: -100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border-radius: 16px 16px 0 0;
+      padding: 20px;
+      box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease-out;
+      z-index: 1001;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    
+    .panel.visible {
+      transform: translateY(-100%);
+    }
+    
+    .panel-content h3 {
+      margin-bottom: 12px;
+      color: #0066cc;
+      font-size: 20px;
+    }
+    
+    .panel-content p {
+      margin-bottom: 8px;
+      color: #555;
+      font-size: 16px;
+    }
+    
+    .panel-content .info-label {
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .panel-close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+    }
+    
+    .panel-close:hover {
+      background: #f0f0f0;
+    }
+    
+    .buttons-container {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+    
+    .buttons-container .btn {
+      flex: 1;
+      min-width: 120px;
+      padding: 12px;
+    }
+    
+    .business-hours {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #eee;
+    }
+    
+    .hours-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    
+    .hours-day {
+      font-weight: 500;
+    }
+    
+    @media (max-width: 480px) {
+      .panel {
+        padding: 16px;
+      }
+      
+      .panel-content h3 {
+        font-size: 18px;
+        margin-bottom: 8px;
+      }
+      
+      .panel-content p {
+        font-size: 14px;
+      }
+      
+      .buttons-container .btn {
+        min-width: 100%;
+      }
+    }
+    
+    /* Estilo personalizado para los marcadores */
+    .custom-marker {
+      background-color: #0066cc;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      border: 2px solid white;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    
+    /* Estilo para el marcador del usuario */
+    .user-marker {
+      background-color: #ff4444;
+    }
   </style>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css">
 </head>
 <body>
   <div id="mapa"></div>
@@ -23,39 +217,89 @@
     <button id="closePanel" class="panel-close">×</button>
     <div class="panel-content">
       <h3 id="locTitle"></h3>
-      <p id="locAddress"></p>
-      <p id="locDetails"></p>
-      <button id="navigate" class="btn" style="width:100%;margin-top:16px;padding:12px">INICIAR NAVEGACIÓN</button>
+      <p><span class="info-label">Dirección:</span> <span id="locAddress"></span></p>
+      <p><span class="info-label">Teléfono:</span> <span id="locPhone"></span></p>
+      <p><span class="info-label">Horario de atención:</span></p>
+      <div id="locHours" class="business-hours"></div>
+      <p id="locDescription"></p>
+      
+      <div class="buttons-container">
+        <button id="navigate" class="btn">INICIAR NAVEGACIÓN</button>
+        <button id="call" class="btn secondary">LLAMAR</button>
+        <button id="website" class="btn secondary">VISITAR SITIO WEB</button>
+      </div>
     </div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
   <script>
-    // Configuración inicial
+    // Configuración inicial con más datos
     const locations = [
-      {name:"Almacén Principal",address:"Calle 23N #5N-45, Cali",coords:[3.4516,-76.5328],phone:"+57 602 5247896"},
-      {name:"Centro Logístico",address:"Carrera 123 #45-67, Cali",coords:[3.4205,-76.5221],phone:"+57 602 5897412"}
+      {
+        name: "Almacén Principal",
+        address: "Calle 23N #5N-45, Cali, Valle del Cauca",
+        coords: [3.4516, -76.5328],
+        phone: "+57 602 5247896",
+        hours: {
+          "Lunes a Viernes": "8:00 AM - 6:00 PM",
+          "Sábados": "9:00 AM - 2:00 PM",
+          "Domingos": "Cerrado"
+        },
+        description: "Nuestro almacén principal ofrece todos nuestros productos con atención personalizada y servicio de entrega inmediata.",
+        website: "https://www.empresa.com/almacen-principal"
+      },
+      {
+        name: "Centro Logístico",
+        address: "Carrera 123 #45-67, Cali, Valle del Cauca",
+        coords: [3.4205, -76.5221],
+        phone: "+57 602 5897412",
+        hours: {
+          "Lunes a Sábado": "6:00 AM - 8:00 PM",
+          "Domingos": "8:00 AM - 12:00 PM"
+        },
+        description: "Centro de distribución regional con capacidad para grandes pedidos y entregas programadas.",
+        website: "https://www.empresa.com/centro-logistico"
+      }
     ];
     
     let map, userMarker, routeControl, selectedLoc;
     
     // Inicializar mapa
     function init() {
-      map = L.map('mapa').setView([3.4372,-76.5225], 13);
+      map = L.map('mapa').setView([3.4372, -76.5225], 13);
       
       // Capas base
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-        attribution:'© OpenStreetMap'
-      }).addTo(map);
+      const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+      });
       
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
-        attribution:'Satélite Maxar'
-      }).addTo(map);
+      const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Satélite Maxar'
+      });
       
-      // Añadir marcadores
-      locations.forEach(loc => {
-        L.marker(loc.coords).addTo(map)
-          .on('click', () => showLocationInfo(loc));
+      // Añadir capa base por defecto
+      osmLayer.addTo(map);
+      
+      // Control de capas
+      const baseLayers = {
+        "Mapa": osmLayer,
+        "Satélite": satelliteLayer
+      };
+      
+      L.control.layers(baseLayers).addTo(map);
+      
+      // Añadir marcadores con estilo personalizado
+      locations.forEach((loc, index) => {
+        const marker = L.marker(loc.coords, {
+          icon: L.divIcon({
+            className: 'custom-marker',
+            html: (index + 1).toString(),
+            iconSize: [24, 24]
+          })
+        }).addTo(map);
+        
+        marker.on('click', () => showLocationInfo(loc));
       });
       
       // Event listeners
@@ -64,28 +308,64 @@
         document.getElementById('panel').classList.remove('visible');
       });
       document.getElementById('navigate').addEventListener('click', startNavigation);
+      document.getElementById('call').addEventListener('click', callBusiness);
+      document.getElementById('website').addEventListener('click', visitWebsite);
       
       // Obtener ubicación inicial
       locateUser();
+      
+      // Ajustar mapa al cambiar tamaño de pantalla
+      window.addEventListener('resize', () => {
+        map.invalidateSize();
+        if (selectedLoc) {
+          map.setView(selectedLoc.coords, map.getZoom());
+        }
+      });
     }
     
     // Geolocalización
     function locateUser() {
-      if(navigator.geolocation) {
+      if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(pos => {
           const coords = [pos.coords.latitude, pos.coords.longitude];
           
-          if(userMarker) {
+          if (userMarker) {
             userMarker.setLatLng(coords);
           } else {
             userMarker = L.marker(coords, {
-              icon: L.divIcon({html:'📍',className:'',iconSize:[32,32]})
+              icon: L.divIcon({
+                className: 'custom-marker user-marker',
+                html: '📍',
+                iconSize: [28, 28]
+              }),
+              zIndexOffset: 1000
             }).addTo(map);
           }
           
           map.setView(coords, 15);
-        }, null, {enableHighAccuracy: true});
+        }, showGeolocationError, {enableHighAccuracy: true});
+      } else {
+        alert("La geolocalización no es soportada por tu navegador.");
       }
+    }
+    
+    function showGeolocationError(error) {
+      let message = "Error al obtener tu ubicación: ";
+      switch(error.code) {
+        case error.PERMISSION_DENIED:
+          message += "Permiso denegado por el usuario.";
+          break;
+        case error.POSITION_UNAVAILABLE:
+          message += "La información de ubicación no está disponible.";
+          break;
+        case error.TIMEOUT:
+          message += "La solicitud de ubicación ha caducado.";
+          break;
+        case error.UNKNOWN_ERROR:
+          message += "Ocurrió un error desconocido.";
+          break;
+      }
+      alert(message);
     }
     
     // Mostrar información de ubicación
@@ -93,15 +373,35 @@
       selectedLoc = location;
       document.getElementById('locTitle').textContent = location.name;
       document.getElementById('locAddress').textContent = location.address;
-      document.getElementById('locDetails').textContent = `Tel: ${location.phone}`;
+      document.getElementById('locPhone').textContent = location.phone;
+      document.getElementById('locDescription').textContent = location.description;
+      
+      // Mostrar horarios
+      const hoursContainer = document.getElementById('locHours');
+      hoursContainer.innerHTML = '';
+      
+      for (const [day, time] of Object.entries(location.hours)) {
+        const row = document.createElement('div');
+        row.className = 'hours-row';
+        row.innerHTML = `
+          <span class="hours-day">${day}</span>
+          <span>${time}</span>
+        `;
+        hoursContainer.appendChild(row);
+      }
+      
+      // Mostrar panel
       document.getElementById('panel').classList.add('visible');
+      
+      // Centrar el mapa en la ubicación seleccionada
+      map.setView(location.coords, 16);
     }
     
     // Navegación
     function startNavigation() {
-      if(!selectedLoc || !userMarker) return;
+      if (!selectedLoc || !userMarker) return;
       
-      if(routeControl) map.removeControl(routeControl);
+      if (routeControl) map.removeControl(routeControl);
       
       routeControl = L.Routing.control({
         waypoints: [
@@ -110,17 +410,55 @@
         ],
         routeWhileDragging: false,
         show: false,
-        router: L.Routing.osrmv1()
+        router: L.Routing.osrmv1({
+          serviceUrl: 'https://router.project-osrm.org/route/v1'
+        }),
+        lineOptions: {
+          styles: [{color: '#0066cc', opacity: 0.7, weight: 5}]
+        },
+        createMarker: function() { return null; }
       }).addTo(map);
       
       // Seguimiento en tiempo real
-      navigator.geolocation.watchPosition(pos => {
+      const watchId = navigator.geolocation.watchPosition(pos => {
         const coords = [pos.coords.latitude, pos.coords.longitude];
         userMarker.setLatLng(coords);
-        map.setView(coords, 16);
+        
+        // Actualizar ruta si existe
+        if (routeControl) {
+          const waypoints = routeControl.getWaypoints();
+          waypoints[0] = L.latLng(coords);
+          routeControl.setWaypoints(waypoints);
+        }
+        
+        // Mantener el zoom actual
+        map.setView(coords, map.getZoom());
       }, null, {enableHighAccuracy: true});
       
+      // Limpiar al cerrar el panel
+      document.getElementById('panel').addEventListener('transitionend', function handler() {
+        if (!this.classList.contains('visible')) {
+          navigator.geolocation.clearWatch(watchId);
+          this.removeEventListener('transitionend', handler);
+        }
+      });
+      
       document.getElementById('panel').classList.remove('visible');
+    }
+    
+    // Llamar al negocio
+    function callBusiness() {
+      if (!selectedLoc) return;
+      window.open(`tel:${selectedLoc.phone.replace(/\D/g, '')}`);
+    }
+    
+    // Visitar sitio web
+    function visitWebsite() {
+      if (!selectedLoc || !selectedLoc.website) {
+        alert("Este negocio no tiene sitio web registrado.");
+        return;
+      }
+      window.open(selectedLoc.website, '_blank');
     }
     
     // Iniciar cuando el DOM esté listo
