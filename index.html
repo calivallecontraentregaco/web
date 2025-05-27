@@ -163,6 +163,30 @@
       font-weight: 500;
     }
     
+    /* Estilos para los controles del mapa */
+    .leaflet-control-container {
+      position: absolute;
+      top: 60px; /* Espacio para la barra de búsqueda */
+      right: 10px;
+      z-index: 1000;
+    }
+    
+    .leaflet-control-zoom {
+      margin-top: 60px !important; /* Separación del borde superior */
+      margin-right: 10px !important;
+      border-radius: 4px !important;
+      overflow: hidden;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+    }
+    
+    .leaflet-control-layers {
+      margin-top: 110px !important; /* Separación del control de zoom */
+      margin-right: 10px !important;
+      border-radius: 4px !important;
+      overflow: hidden;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+    }
+    
     @media (max-width: 480px) {
       .panel {
         padding: 16px;
@@ -179,6 +203,14 @@
       
       .buttons-container .btn {
         min-width: 100%;
+      }
+      
+      .leaflet-control-zoom {
+        margin-top: 70px !important;
+      }
+      
+      .leaflet-control-layers {
+        margin-top: 120px !important;
       }
     }
     
@@ -267,7 +299,14 @@
     
     // Inicializar mapa
     function init() {
-      map = L.map('mapa').setView([3.4372, -76.5225], 13);
+      map = L.map('mapa', {
+        zoomControl: false // Desactivamos el zoom por defecto para posicionarlo manualmente
+      }).setView([3.4372, -76.5225], 13);
+      
+      // Añadir control de zoom en la posición deseada
+      L.control.zoom({
+        position: 'topright' // Posición personalizada
+      }).addTo(map);
       
       // Capas base
       const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -287,7 +326,9 @@
         "Satélite": satelliteLayer
       };
       
-      L.control.layers(baseLayers).addTo(map);
+      L.control.layers(baseLayers, null, {
+        position: 'topright' // Posición personalizada
+      }).addTo(map);
       
       // Añadir marcadores con estilo personalizado
       locations.forEach((loc, index) => {
