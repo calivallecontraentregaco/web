@@ -116,7 +116,7 @@
   <div id="contenedor-mapa">
     <div id="barra-superior">
       <input type="search" id="buscador" placeholder="Buscar ubicación en Cali..." enterkeyhint="search">
-      <button class="btn">Buscar</button>
+      <button class="btn" id="b2b-btn">B2B</button>
     </div>
     <div id="mapa"></div>
   </div>
@@ -253,7 +253,14 @@
       }
     }
 
-    document.addEventListener('DOMContentLoaded', initializeMap);
+    document.addEventListener('DOMContentLoaded', function() {
+      initializeMap();
+      
+      // Redirección al hacer clic en el botón B2B
+      document.getElementById('b2b-btn').addEventListener('click', function() {
+        window.location.href = "https://b2b.contraentregaco.com/";
+      });
+    });
   </script>
 </body>
 </html>
