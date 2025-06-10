@@ -81,8 +81,8 @@
         
         <div id="alert" class="alert" style="display: none;"></div>
         
-        <!-- Cambia "tucorreo@tudominio.com" por el correo destino configurado en Cloudflare Email Routing -->
-        <form id="registerForm" action="mailto:calivalle@contraentregaco.com" method="POST" enctype="text/plain">
+        <!-- Cambia la URL a la de tu Worker de Cloudflare -->
+        <form id="registerForm" action="https://c.calivalle.workers.dev/" method="POST" autocomplete="off">
             <h2>Información de la Empresa</h2>
             
             <div class="form-group">
@@ -133,31 +133,49 @@
                 <input type="text" id="idNumber" name="numero_identificacion" required>
             </div>
             
-            <!-- Campo oculto para redirección (no es compatible con mailto, solo webservices) -->
-            <!-- <input type="hidden" name="_next" value="https://tudominio.com/gracias.html"> -->
-            
-            <!-- Para recibir copia al usuario (no es compatible con mailto) -->
-            <!-- <input type="hidden" name="_cc" value="{email}"> -->
-            
             <button type="submit" class="btn">Registrarse</button>
         </form>
     </div>
 
     <script>
-        document.getElementById('registerForm').addEventListener('submit', function(e) {
-            const btn = this.querySelector('button');
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const form = this;
+            const btn = form.querySelector('button');
             btn.disabled = true;
             btn.textContent = 'Enviando...';
-            
-            // Mostrar mensaje de éxito aunque el envío real lo maneja el cliente de correo
-            setTimeout(() => {
-                const alertBox = document.getElementById('alert');
-                alertBox.textContent = 'Registro enviado con éxito. Te contactaremos pronto.';
-                alertBox.className = 'alert success';
-                alertBox.style.display = 'block';
-                btn.disabled = false;
-                btn.textContent = 'Registrarse';
-            }, 1500);
+
+            const alertBox = document.getElementById('alert');
+            alertBox.style.display = 'none';
+            alertBox.className = 'alert';
+
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    alertBox.textContent = 'Registro enviado con éxito. Te contactaremos pronto.';
+                    alertBox.classList.add('success');
+                    form.reset();
+                } else {
+                    const res = await response.json().catch(() => ({}));
+                    alertBox.textContent = res.error || 'Error al enviar el registro. Intenta nuevamente.';
+                    alertBox.classList.add('error');
+                }
+            } catch (err) {
+                alertBox.textContent = 'Error de conexión. Intenta nuevamente.';
+                alertBox.classList.add('error');
+            }
+
+            alertBox.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = 'Registrarse';
         });
     </script>
 </body>
