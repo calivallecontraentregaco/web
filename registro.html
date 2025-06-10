@@ -81,8 +81,8 @@
         
         <div id="alert" class="alert" style="display: none;"></div>
         
-        <!-- Cambia "TU_ID_DE_FORMSPREE" por tu ID real -->
-        <form id="registerForm" action="https://formspree.io/f/TU_ID_DE_FORMSPREE" method="POST">
+        <!-- Cambia "tucorreo@tudominio.com" por el correo destino configurado en Cloudflare Email Routing -->
+        <form id="registerForm" action="mailto:calivalle@contraentregaco.com" method="POST" enctype="text/plain">
             <h2>Información de la Empresa</h2>
             
             <div class="form-group">
@@ -133,11 +133,11 @@
                 <input type="text" id="idNumber" name="numero_identificacion" required>
             </div>
             
-            <!-- Campo oculto para redirección después del envío (opcional) -->
-            <input type="hidden" name="_next" value="https://tudominio.com/gracias.html">
+            <!-- Campo oculto para redirección (no es compatible con mailto, solo webservices) -->
+            <!-- <input type="hidden" name="_next" value="https://tudominio.com/gracias.html"> -->
             
-            <!-- Para recibir copia al usuario (opcional) -->
-            <input type="hidden" name="_cc" value="{email}">
+            <!-- Para recibir copia al usuario (no es compatible con mailto) -->
+            <!-- <input type="hidden" name="_cc" value="{email}"> -->
             
             <button type="submit" class="btn">Registrarse</button>
         </form>
@@ -149,7 +149,7 @@
             btn.disabled = true;
             btn.textContent = 'Enviando...';
             
-            // Mostrar mensaje de éxito (el envío real lo maneja Formspree)
+            // Mostrar mensaje de éxito aunque el envío real lo maneja el cliente de correo
             setTimeout(() => {
                 const alertBox = document.getElementById('alert');
                 alertBox.textContent = 'Registro enviado con éxito. Te contactaremos pronto.';
