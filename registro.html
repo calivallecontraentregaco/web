@@ -14,7 +14,6 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://www.tudominio.com/registro-erp">
   <meta property="og:site_name" content="Tu Empresa">
-  <!-- Estilos mejorados para SEO y responsive -->
   <style>
     body {
       background: #f7f7f7;
@@ -197,7 +196,6 @@
     </form>
   </main>
   <script>
-    // SEO: Marca Schema.org para Organization
     document.body.insertAdjacentHTML('beforeend', `
       <script type="application/ld+json">
       {
@@ -210,7 +208,6 @@
       <\/script>
     `);
 
-    // JS para enviar el formulario vía AJAX y mostrar mensajes
     const form = document.getElementById('registerForm');
     const alertBox = document.getElementById('alert');
     form.addEventListener('submit', async (e) => {
