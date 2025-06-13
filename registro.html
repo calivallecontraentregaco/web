@@ -8,7 +8,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://www.tudominio.com/registro-erp">
-  <!-- Open Graph SEO -->
   <meta property="og:title" content="Registro ERP | Tu Empresa">
   <meta property="og:description" content="Regístrate para acceder al ERP de Tu Empresa. Completa el formulario y gestiona tu empresa fácilmente.">
   <meta property="og:type" content="website">
@@ -188,8 +187,8 @@
         <input type="text" required name="numero_identificacion" id="numero_identificacion" maxlength="40" autocomplete="off">
       </div>
       <div class="checkbox-group">
-        <input type="checkbox" required name="acepto_politicas" id="acepto_politicas" value="sí">
-        <label for="acepto_politicas">
+        <input type="checkbox" required name="acepto_terminos" id="acepto_terminos" value="true">
+        <label for="acepto_terminos">
           He leído y acepto las <a href="/politica-privacidad" target="_blank" rel="noopener noreferrer">Políticas de Privacidad</a> y <a href="/terminos-condiciones" target="_blank" rel="noopener noreferrer">Términos y Condiciones</a> de la empresa.
         </label>
       </div>
@@ -200,52 +199,47 @@
     document.addEventListener('DOMContentLoaded', function() {
       const form = document.getElementById('registerForm');
       const alertBox = document.getElementById('alert');
-      const checkbox = document.getElementById('acepto_politicas');
+      const terminosCheckbox = document.getElementById('acepto_terminos');
       
-      // Función para mostrar errores
-      function showError(message) {
+      // Función para mostrar mensajes
+      function showAlert(message, type) {
         alertBox.textContent = message;
-        alertBox.classList.remove('success');
-        alertBox.classList.add('error');
+        alertBox.className = `alert ${type}`;
         alertBox.style.display = 'block';
+        setTimeout(() => {
+          alertBox.style.display = 'none';
+        }, 5000);
       }
       
-      // Función para mostrar éxito
-      function showSuccess(message) {
-        alertBox.textContent = message;
-        alertBox.classList.remove('error');
-        alertBox.classList.add('success');
-        alertBox.style.display = 'block';
-      }
-      
-      // Validar el formulario
+      // Validar formulario
       function validateForm() {
-        // Validar checkbox
-        if (!checkbox.checked) {
-          showError('Debes aceptar las políticas y términos de la empresa');
-          checkbox.focus();
+        // Validar checkbox de términos
+        if (!terminosCheckbox.checked) {
+          showAlert('Debes aceptar los términos y condiciones', 'error');
+          terminosCheckbox.focus();
           return false;
         }
         
-        // Validar otros campos requeridos
+        // Validar campos requeridos
         const requiredFields = form.querySelectorAll('[required]');
         for (const field of requiredFields) {
           if (!field.value.trim()) {
-            showError(`Por favor completa el campo: ${field.labels[0].textContent.replace('*', '').trim()}`);
+            const fieldName = field.labels[0].textContent.replace('*', '').trim();
+            showAlert(`El campo ${fieldName} es obligatorio`, 'error');
             field.focus();
             return false;
           }
           
           // Validación específica para email
           if (field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field.value)) {
-            showError('Por favor ingresa un correo electrónico válido');
+            showAlert('Por favor ingresa un correo electrónico válido', 'error');
             field.focus();
             return false;
           }
           
-          // Validación específica para teléfono
+          // Validación para teléfono
           if (field.type === 'tel' && !/^[0-9+\s\-()]{7,20}$/.test(field.value)) {
-            showError('Por favor ingresa un número de teléfono válido');
+            showAlert('Por favor ingresa un número de teléfono válido', 'error');
             field.focus();
             return false;
           }
@@ -261,7 +255,17 @@
         
         try {
           const formData = new FormData(form);
-          const data = Object.fromEntries(formData.entries());
+          const data = {
+            nombre_comercial: formData.get('nombre_comercial'),
+            direccion: formData.get('direccion'),
+            telefono: formData.get('telefono'),
+            nombres_completos: formData.get('nombres_completos'),
+            email: formData.get('email'),
+            celular: formData.get('celular'),
+            tipo_identificacion: formData.get('tipo_identificacion'),
+            numero_identificacion: formData.get('numero_identificacion'),
+            acepto_terminos: formData.get('acepto_terminos') === 'true' // Asegurar valor booleano
+          };
           
           const response = await fetch(form.action, {
             method: 'POST',
@@ -271,48 +275,30 @@
             body: JSON.stringify(data)
           });
           
+          const result = await response.json();
+          
           if (response.ok) {
-            const result = await response.json();
-            if (result.success) {
-              showSuccess('¡Registro enviado correctamente!');
-              form.reset();
-            } else {
-              showError(result.message || 'Error al procesar el registro');
-            }
+            showAlert('¡Registro enviado correctamente!', 'success');
+            form.reset();
           } else {
-            const error = await response.text();
-            showError(error || 'Error en el servidor. Por favor intenta nuevamente.');
+            showAlert(result.error || 'Error al procesar el registro', 'error');
           }
         } catch (error) {
           console.error('Error:', error);
-          showError('Error de conexión. Por favor verifica tu conexión e intenta nuevamente.');
+          showAlert('Error de conexión. Por favor intenta nuevamente.', 'error');
         } finally {
           submitButton.disabled = false;
         }
       }
       
-      // Manejar el envío del formulario
+      // Manejar envío del formulario
       form.addEventListener('submit', async function(e) {
         e.preventDefault();
-        alertBox.style.display = 'none';
         
         if (validateForm()) {
           await submitForm();
         }
       });
-      
-      // Schema markup
-      document.body.insertAdjacentHTML('beforeend', `
-        <script type="application/ld+json">
-        {
-          "@context": "https://schema.org",
-          "@type": "Organization",
-          "name": "Tu Empresa",
-          "url": "https://www.tudominio.com",
-          "logo": "https://www.tudominio.com/logo.png"
-        }
-        <\/script>
-      `);
     });
   </script>
 </body>
