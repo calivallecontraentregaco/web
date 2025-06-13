@@ -215,34 +215,42 @@
       alertBox.style.display = 'none';
       alertBox.textContent = '';
       alertBox.className = 'alert';
-      if (!form.acepto_politicas.checked) {
+      
+      // Verificar el checkbox correctamente
+      const checkbox = document.getElementById('acepto_politicas');
+      if (!checkbox.checked) {
         alertBox.textContent = 'Debes aceptar las políticas de la empresa.';
         alertBox.classList.add('error');
         alertBox.style.display = 'block';
         return;
       }
+      
       const formData = new FormData(form);
       const data = Object.fromEntries(formData.entries());
       form.querySelector('button').disabled = true;
+      
       try {
         const res = await fetch(form.action, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
-        const json = await res.json();
-        if (res.ok && json.success) {
+        
+        if (res.ok) {
           alertBox.textContent = '¡Registro enviado correctamente!';
           alertBox.classList.add('success');
           form.reset();
         } else {
+          const json = await res.json().catch(() => ({}));
           alertBox.textContent = json.error || 'Error al enviar, inténtalo más tarde.';
           alertBox.classList.add('error');
         }
       } catch (err) {
+        console.error('Error:', err);
         alertBox.textContent = 'Error de conexión. Inténtalo más tarde.';
         alertBox.classList.add('error');
       }
+      
       alertBox.style.display = 'block';
       form.querySelector('button').disabled = false;
     });
