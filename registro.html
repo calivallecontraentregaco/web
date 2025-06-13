@@ -145,7 +145,7 @@
     <h1>Registro ERP</h1>
     <h2>Completa el formulario para registrar tu empresa y acceder a nuestro sistema de gestión ERP</h2>
     <div id="alert" class="alert" role="alert"></div>
-    <form id="registerForm">
+    <form id="registerForm" action="https://registro-calivalle.jcpm19991118.workers.dev/" method="POST" autocomplete="on">
       <h3>Información de la Empresa</h3>
       <div class="form-group">
         <label for="nombre_comercial">Nombre comercial*</label>
@@ -199,41 +199,104 @@
     document.addEventListener('DOMContentLoaded', function() {
       const form = document.getElementById('registerForm');
       const alertBox = document.getElementById('alert');
+      const terminosCheckbox = document.getElementById('acepto_terminos');
       
+      // Función para mostrar mensajes
       function showAlert(message, type) {
         alertBox.textContent = message;
         alertBox.className = `alert ${type}`;
         alertBox.style.display = 'block';
-        setTimeout(() => alertBox.style.display = 'none', 5000);
+        setTimeout(() => {
+          alertBox.style.display = 'none';
+        }, 5000);
       }
-
+      
+      // Validar formulario
+      function validateForm() {
+        // Validar checkbox de términos
+        if (!terminosCheckbox.checked) {
+          showAlert('Debes aceptar los términos y condiciones', 'error');
+          terminosCheckbox.focus();
+          return false;
+        }
+        
+        // Validar campos requeridos
+        const requiredFields = form.querySelectorAll('[required]');
+        for (const field of requiredFields) {
+          if (!field.value.trim()) {
+            const fieldName = field.labels[0].textContent.replace('*', '').trim();
+            showAlert(`El campo ${fieldName} es obligatorio`, 'error');
+            field.focus();
+            return false;
+          }
+          
+          // Validación específica para email
+          if (field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field.value)) {
+            showAlert('Por favor ingresa un correo electrónico válido', 'error');
+            field.focus();
+            return false;
+          }
+          
+          // Validación para teléfono
+          if (field.type === 'tel' && !/^[0-9+\s\-()]{7,20}$/.test(field.value)) {
+            showAlert('Por favor ingresa un número de teléfono válido', 'error');
+            field.focus();
+            return false;
+          }
+        }
+        
+        return true;
+      }
+      
+      // Enviar formulario
+      async function submitForm() {
+        const submitButton = form.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        
+        try {
+          const formData = new FormData(form);
+          const data = {
+            nombre_comercial: formData.get('nombre_comercial'),
+            direccion: formData.get('direccion'),
+            telefono: formData.get('telefono'),
+            nombres_completos: formData.get('nombres_completos'),
+            email: formData.get('email'),
+            celular: formData.get('celular'),
+            tipo_identificacion: formData.get('tipo_identificacion'),
+            numero_identificacion: formData.get('numero_identificacion'),
+            acepto_terminos: formData.get('acepto_terminos') === 'true' // Asegurar valor booleano
+          };
+          
+          const response = await fetch(form.action, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+          });
+          
+          const result = await response.json();
+          
+          if (response.ok) {
+            showAlert('¡Registro enviado correctamente!', 'success');
+            form.reset();
+          } else {
+            showAlert(result.error || 'Error al procesar el registro', 'error');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          showAlert('Error de conexión. Por favor intenta nuevamente.', 'error');
+        } finally {
+          submitButton.disabled = false;
+        }
+      }
+      
+      // Manejar envío del formulario
       form.addEventListener('submit', async function(e) {
         e.preventDefault();
         
-        if (!document.getElementById('acepto_terminos').checked) {
-          showAlert('Debes aceptar los términos y condiciones', 'error');
-          return;
-        }
-
-        const formData = new FormData(form);
-        const data = Object.fromEntries(formData.entries());
-
-        try {
-          const response = await fetch('https://registro-calivalle.jcpm19991118.workers.dev/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-          });
-
-          const result = await response.text();
-          showAlert(
-            response.ok ? '¡Registro exitoso! Recibirás un correo de confirmación.' : result,
-            response.ok ? 'success' : 'error'
-          );
-          
-          if (response.ok) form.reset();
-        } catch (error) {
-          showAlert('Error de conexión. Intenta nuevamente.', 'error');
+        if (validateForm()) {
+          await submitForm();
         }
       });
     });
