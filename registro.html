@@ -2,72 +2,256 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Registro ERP</title>
+  <title>Registro ERP | Tu Empresa</title>
+  <meta name="description" content="Formulario de registro para acceder al ERP de Tu Empresa. Registra los datos de tu empresa y representante legal de forma segura y rápida.">
+  <meta name="keywords" content="ERP, registro de empresa, formulario, gestión empresarial, representante legal">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://www.tudominio.com/registro-erp">
+  <meta property="og:title" content="Registro ERP | Tu Empresa">
+  <meta property="og:description" content="Regístrate para acceder al ERP de Tu Empresa. Completa el formulario y gestiona tu empresa fácilmente.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://www.tudominio.com/registro-erp">
+  <meta property="og:site_name" content="Tu Empresa">
   <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
-    .form-group { margin-bottom: 15px; }
-    label { display: block; margin-bottom: 5px; font-weight: bold; }
-    input, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
-    button { background: #0066cc; color: white; border: none; padding: 10px 15px; cursor: pointer; }
-    #alert { margin: 15px 0; padding: 10px; border-radius: 4px; display: none; }
-    .success { background: #d4edda; }
-    .error { background: #f8d7da; }
+    body {
+      background: #f7f7f7;
+      font-family: Arial, Helvetica, sans-serif;
+      margin: 0;
+      padding: 0;
+      color: #222;
+    }
+    .container {
+      max-width: 500px;
+      margin: 40px auto;
+      background: #fff;
+      padding: 28px 20px 12px;
+      border-radius: 10px;
+      box-shadow: 0 3px 18px rgba(0,0,0,0.08);
+    }
+    h1 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 6px;
+    }
+    h2 {
+      text-align: center;
+      font-size: 1.18rem;
+      color: #555;
+      font-weight: 400;
+      margin-top: 0;
+      margin-bottom: 24px;
+    }
+    h3 {
+      font-size: 1.1rem;
+      margin-top: 18px;
+      margin-bottom: 10px;
+      color: #2d7ecb;
+    }
+    .form-group {
+      margin-bottom: 14px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 1rem;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 9px 7px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 1rem;
+      background: #fafbfc;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: #2d7ecb;
+      outline: none;
+    }
+    textarea {
+      min-height: 70px;
+      resize: vertical;
+    }
+    .checkbox-group {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+    .checkbox-group input[type="checkbox"] {
+      margin-right: 8px;
+      margin-top: 3px;
+      accent-color: #2d7ecb;
+      width: auto;
+    }
+    .checkbox-group label {
+      font-size: 0.97rem;
+      font-weight: 400;
+      color: #222;
+    }
+    .checkbox-group a {
+      color: #2d7ecb;
+      text-decoration: underline;
+      font-size: 0.97rem;
+    }
+    button {
+      background: #2d7ecb;
+      color: #fff;
+      border: none;
+      padding: 13px;
+      width: 100%;
+      border-radius: 4px;
+      font-size: 1.12rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 7px;
+      transition: background 0.2s;
+    }
+    button:disabled {
+      background: #bdc3c7;
+      cursor: not-allowed;
+    }
+    .alert {
+      display: none;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+    .alert.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #b7e0c5;
+    }
+    .alert.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #e3b9bb;
+    }
+    @media (max-width: 600px) {
+      .container {
+        max-width: 97vw;
+        padding: 16px 5vw 8px;
+      }
+      h1 { font-size: 1.45rem; }
+      h2 { font-size: 1rem; }
+      button { font-size: 1rem; }
+    }
   </style>
 </head>
 <body>
-  <h1>Registro ERP</h1>
-  <div id="alert"></div>
-  <form id="registerForm">
-    <div class="form-group">
-      <label for="nombre_comercial">Nombre comercial*</label>
-      <input type="text" id="nombre_comercial" required>
-    </div>
-    <div class="form-group">
-      <label for="email">Correo electrónico*</label>
-      <input type="email" id="email" required>
-    </div>
-    <div class="form-group">
-      <label for="celular">Celular*</label>
-      <input type="tel" id="celular" required>
-    </div>
-    <button type="submit">Enviar</button>
-  </form>
-
+  <main class="container">
+    <h1>Registro ERP</h1>
+    <h2>Completa el formulario para registrar tu empresa y acceder a nuestro sistema de gestión ERP</h2>
+    <div id="alert" class="alert" role="alert"></div>
+    <form id="registerForm">
+      <h3>Información de la Empresa</h3>
+      <div class="form-group">
+        <label for="nombre_comercial">Nombre comercial*</label>
+        <input type="text" required name="nombre_comercial" id="nombre_comercial" maxlength="120" autocomplete="organization">
+      </div>
+      <div class="form-group">
+        <label for="direccion">Dirección*</label>
+        <input type="text" required name="direccion" id="direccion" maxlength="180" autocomplete="street-address">
+      </div>
+      <div class="form-group">
+        <label for="telefono">Teléfono*</label>
+        <input type="tel" required name="telefono" id="telefono" maxlength="20" pattern="[0-9+\s\-()]{7,20}" title="Solo números, espacios, +, -, ()" autocomplete="tel">
+      </div>
+      <h3>Representante Legal</h3>
+      <div class="form-group">
+        <label for="nombres_completos">Nombres completos*</label>
+        <input type="text" required name="nombres_completos" id="nombres_completos" maxlength="90" autocomplete="name">
+      </div>
+      <div class="form-group">
+        <label for="email">Correo electrónico*</label>
+        <input type="email" required name="email" id="email" maxlength="90" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label for="celular">Celular/WhatsApp*</label>
+        <input type="tel" required name="celular" id="celular" maxlength="20" pattern="[0-9+\s\-()]{7,20}" title="Solo números, espacios, +, -, ()" autocomplete="tel">
+      </div>
+      <div class="form-group">
+        <label for="tipo_identificacion">Tipo de identificación*</label>
+        <select id="tipo_identificacion" name="tipo_identificacion" required>
+          <option value="">Seleccione...</option>
+          <option value="NIT">NIT</option>
+          <option value="CC">Cédula de ciudadanía</option>
+          <option value="CE">Cédula de extranjería</option>
+          <option value="PAS">Pasaporte</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="numero_identificacion">Número de identificación*</label>
+        <input type="text" required name="numero_identificacion" id="numero_identificacion" maxlength="40" autocomplete="off">
+      </div>
+      <div class="checkbox-group">
+        <input type="checkbox" required name="acepto_terminos" id="acepto_terminos" value="true">
+        <label for="acepto_terminos">
+          He leído y acepto las <a href="/politica-privacidad" target="_blank" rel="noopener noreferrer">Políticas de Privacidad</a> y <a href="/terminos-condiciones" target="_blank" rel="noopener noreferrer">Términos y Condiciones</a> de la empresa.
+        </label>
+      </div>
+      <button type="submit">Registrarse</button>
+    </form>
+  </main>
   <script>
-    document.getElementById('registerForm').addEventListener('submit', async (e) => {
-      e.preventDefault()
-      const alert = document.getElementById('alert')
+    document.addEventListener('DOMContentLoaded', function() {
+      const form = document.getElementById('registerForm');
+      const alertBox = document.getElementById('alert');
       
-      try {
-        const response = await fetch('https://registro-calivalle.jcpm19991118.workers.dev/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            nombre_comercial: document.getElementById('nombre_comercial').value,
-            email: document.getElementById('email').value,
-            celular: document.getElementById('celular').value
-          })
-        })
-
-        const result = await response.json()
-        
-        if (response.ok) {
-          showAlert('Registro exitoso', 'success')
-        } else {
-          throw new Error(result.error || 'Error desconocido')
-        }
-      } catch (error) {
-        showAlert(`Error: ${error.message}`, 'error')
+      // Mostrar alertas
+      function showAlert(message, type) {
+        alertBox.textContent = message;
+        alertBox.className = `alert ${type}`;
+        alertBox.style.display = 'block';
+        setTimeout(() => alertBox.style.display = 'none', 5000);
       }
-    })
 
-    function showAlert(message, type) {
-      const alert = document.getElementById('alert')
-      alert.textContent = message
-      alert.className = type
-      alert.style.display = 'block'
-      setTimeout(() => alert.style.display = 'none', 5000)
-    }
+      // Enviar formulario
+      form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Validar checkbox
+        if (!document.getElementById('acepto_terminos').checked) {
+          showAlert('Debes aceptar los términos y condiciones', 'error');
+          return;
+        }
+
+        // Recolectar datos
+        const formData = new FormData(form);
+        const data = {
+          nombre_comercial: formData.get('nombre_comercial'),
+          direccion: formData.get('direccion'),
+          telefono: formData.get('telefono'),
+          nombres_completos: formData.get('nombres_completos'),
+          email: formData.get('email'),
+          celular: formData.get('celular'),
+          tipo_identificacion: formData.get('tipo_identificacion'),
+          numero_identificacion: formData.get('numero_identificacion')
+        };
+
+        try {
+          const response = await fetch('https://tu-worker.tu-usuario.workers.dev/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+
+          const result = await response.json();
+          
+          if (response.ok) {
+            showAlert('¡Registro exitoso! Recibirás un correo de confirmación.', 'success');
+            form.reset();
+          } else {
+            throw new Error(result.error || 'Error en el servidor');
+          }
+        } catch (error) {
+          showAlert(`Error: ${error.message}`, 'error');
+          console.error('Error:', error);
+        }
+      });
+    });
   </script>
 </body>
 </html>
